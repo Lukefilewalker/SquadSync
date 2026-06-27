@@ -1,5 +1,8 @@
 from pathlib import Path
+import os
 import sqlite3
+from datetime import datetime
+import requests
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import RedirectResponse
@@ -300,6 +303,140 @@ def update_player_game(
 
     return RedirectResponse("/games", status_code=303)
 
+def fetch_rawg_metadata(title: str):
+    api_key = os.getenv("RAWG_API_KEY")
+    if not api_key:
+        return None
+
+    search_url = "https://api.rawg.io/api/games"
+    search_params = {
+        "key": api_key,
+        "search": title,
+        "page_size": 1,
+    }
+
+    search_response = requests.get(search_url, params=search_params, timeout=10)
+    search_response.raise_for_status()
+    search_data = search_response.json()
+
+    results = search_data.get("results", [])
+    if not results:
+        return None
+
+    match = results[0]
+    rawg_id = match.get("id")
+
+    detail_url = f"https://api.rawg.io/api/games/{rawg_id}"
+    detail_response = requests.get(detail_url, params={"key": api_key}, timeout=10)
+    detail_response.raise_for_status()
+    detail = detail_response.json()
+
+    genres = ",".join([g.get("name", "") for g in detail.get("genres", []) if g.get("name")])
+    platforms = ",".join([
+        p.get("platform", {}).get("name", "")
+        for p in detail.get("platforms", [])
+        if p.get("platform", {}).get("name")
+    ])
+
+    description = detail.get("description_raw") or detail.get("description") or ""
+
+    return {
+        "rawg_id": rawg_id,
+        "title": detail.get("name") or match.get("name") or title,
+        "released": detail.get("released") or "",
+        "genres": genres,
+        "platforms": platforms,
+        "background_image": detail.get("background_image") or "",
+        "description": description,
+    }
+
+
+@app.post("/games/{game_id}/fetch-metadata")
+def fetch_game_metadata(game_id: int):
+    with db() as conn:
+        game = conn.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
+
+        if not game:
+            return RedirectResponse("/games", status_code=303)
+
+        metadata = fetch_rawg_metadata(game["title"])
+
+        if metadata:
+            conn.execute(
+                """
+                UPDATE games
+                SET rawg_id = ?,
+                    title = ?,
+                    released = ?,
+                    genres = ?,
+                    platforms = ?,
+                    background_image = ?,
+                    description = ?,
+                    metadata_synced_at = ?
+                WHERE id = ?
+                """,
+                (
+                    metadata["rawg_id"],
+                    metadata["title"],
+                    metadata["released"],
+                    metadata["genres"],
+                    metadata["platforms"],
+                    metadata["background_image"],
+                    metadata["description"],
+                    datetime.now().isoformat(timespec="seconds"),
+                    game_id,
+                ),
+            )
+            conn.commit()
+
+    return RedirectResponse("/games", status_code=303)
+
+@app.post("/games/fetch-missing-metadata")
+def fetch_missing_metadata():
+    with db() as conn:
+        games = conn.execute(
+            """
+            SELECT * FROM games
+            WHERE rawg_id IS NULL
+               OR rawg_id = ''
+               OR metadata_synced_at = ''
+            ORDER BY title
+            """
+        ).fetchall()
+
+        for game in games:
+            metadata = fetch_rawg_metadata(game["title"])
+
+            if metadata:
+                conn.execute(
+                    """
+                    UPDATE games
+                    SET rawg_id = ?,
+                        title = ?,
+                        released = ?,
+                        genres = ?,
+                        platforms = ?,
+                        background_image = ?,
+                        description = ?,
+                        metadata_synced_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        metadata["rawg_id"],
+                        metadata["title"],
+                        metadata["released"],
+                        metadata["genres"],
+                        metadata["platforms"],
+                        metadata["background_image"],
+                        metadata["description"],
+                        datetime.now().isoformat(timespec="seconds"),
+                        game["id"],
+                    ),
+                )
+
+        conn.commit()
+
+    return RedirectResponse("/games", status_code=303)
 
 @app.get("/players")
 def players(request: Request):

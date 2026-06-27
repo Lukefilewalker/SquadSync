@@ -4,6 +4,8 @@ services:
     container_name: game-night-finder
     ports:
       - "8099:8000"
+    env_file:
+      - .env
     volumes:
       - ./data:/app/data
     restart: unless-stopped
