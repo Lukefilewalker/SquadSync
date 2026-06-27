@@ -1,0 +1,9 @@
+services:
+  game-night-finder:
+    build: .
+    container_name: game-night-finder
+    ports:
+      - "8099:8000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+    <h2>Add Game</h2>
+    <form class="inline" method="post" action="/games/add">
+        <input name="title" placeholder="Game title" required>
+        <input name="crossplay" placeholder="Crossplay: Yes/No/Partial/Unknown" value="Unknown">
+        <input name="min_players" type="number" value="1" min="1" style="width: 90px;">
+        <input name="max_players" type="number" value="4" min="1" style="width: 90px;">
+        <input name="tags" placeholder="Tags">
+        <input name="notes" placeholder="Notes">
+        <button>Add</button>
+    </form>
+</div>
+
+<h2>Edit Library Status</h2>
+
+{% for row in rows %}
+<div class="card">
+    <h3>{{ row.game.title }}</h3>
+    <p class="small">
+        Crossplay: {{ row.game.crossplay }} |
+        Players: {{ row.game.min_players }}-{{ row.game.max_players }} |
+        {{ row.game.tags }}
+    </p>
+
+    <table>
+        <tr>
+            <th>Player</th>
+            <th>Status</th>
+            <th>Platform</th>
+            <th>Notes</th>
+            <th>Save</th>
+        </tr>
+        {% for player in players %}
+        <tr>
+            <form method="post" action="/player-game/update">
+                <input type="hidden" name="player_id" value="{{ player.id }}">
+                <input type="hidden" name="game_id" value="{{ row.game.id }}">
+                <td>{{ player.name }}</td>
+                <td>
+                    <select name="status">
+                        {% for status in statuses %}
+                            <option value="{{ status }}" {% if row.statuses[player.id].status == status %}selected{% endif %}>{{ status }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td><input name="platform" value="{{ row.statuses[player.id].platform }}" placeholder="PC, Xbox, Steam Deck"></td>
+                <td><input name="notes" value="{{ row.statuses[player.id].notes }}" placeholder="Optional"></td>
+                <td><button>Save</button></td>
+            </form>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endfor %}
+
+{% endblock %}

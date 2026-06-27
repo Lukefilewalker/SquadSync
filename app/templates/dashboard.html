@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="grid">
+{% for bucket, items in buckets.items() %}
+    <div class="card">
+        <h2>{{ bucket }}</h2>
+        {% if items %}
+            <ul>
+            {% for row in items %}
+                <li>
+                    <strong>{{ row.game.title }}</strong>
+                    <div class="small">
+                        Crossplay: {{ row.game.crossplay }} |
+                        Players: {{ row.game.min_players }}-{{ row.game.max_players }}
+                    </div>
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p class="small">Nothing here yet.</p>
+        {% endif %}
+    </div>
+{% endfor %}
+</div>
+
+<h2>Full Matrix</h2>
+<table>
+    <tr>
+        <th>Game</th>
+        {% for player in players %}
+            <th>{{ player.name }}</th>
+        {% endfor %}
+        <th>Crossplay</th>
+    </tr>
+    {% for row in rows %}
+    <tr>
+        <td><strong>{{ row.game.title }}</strong><br><span class="small">{{ row.game.tags }}</span></td>
+        {% for player in players %}
+            {% set s = row.statuses[player.id].status %}
+            <td class="status-{{ s|lower|replace(' ', '-') }}">
+                {{ s }}
+                {% if row.statuses[player.id].platform %}
+                    <br><span class="small">{{ row.statuses[player.id].platform }}</span>
+                {% endif %}
+            </td>
+        {% endfor %}
+        <td>{{ row.game.crossplay }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}
