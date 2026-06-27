@@ -60,6 +60,23 @@
 {% endif %}
 
         PC/Xbox Crossplay: {{ row.game.pc_xbox_crossplay or row.game.crossplay }} |
+        <form class="inline" method="post" action="/game-crossplay/update" style="margin-bottom: 16px;">
+    <input type="hidden" name="game_id" value="{{ row.game.id }}">
+
+    <select name="pc_xbox_crossplay">
+        {% for option in crossplay_options %}
+            <option value="{{ option }}" {% if (row.game.pc_xbox_crossplay or row.game.crossplay) == option %}selected{% endif %}>
+                PC/Xbox: {{ option }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <input name="crossplay_notes"
+           value="{{ row.game.crossplay_notes }}"
+           placeholder="Crossplay notes">
+
+    <button type="submit">Save Crossplay</button>
+</form>
         Players: {{ row.game.min_players }}-{{ row.game.max_players }} |
         Tags: {{ row.game.tags }}
         {% if row.game.crossplay_notes %}

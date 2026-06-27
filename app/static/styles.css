@@ -1,15 +1,16 @@
 :root {
-    --bg: #282a36;
-    --current-line: #44475a;
-    --foreground: #f8f8f2;
-    --comment: #6272a4;
-    --cyan: #8be9fd;
-    --green: #50fa7b;
-    --orange: #ffb86c;
-    --pink: #ff79c6;
-    --purple: #bd93f9;
-    --red: #ff5555;
-    --yellow: #f1fa8c;
+    --bg: #22212C;
+    --current-line: #454158;
+    --foreground: #F8F8F2;
+    --comment: #7970A9;
+
+    --cyan: #80FFEA;
+    --green: #8AFF80;
+    --orange: #FFCA80;
+    --pink: #FF80BF;
+    --purple: #9580FF;
+    --red: #FF9580;
+    --yellow: #FFFF80;
 }
 
 body {
@@ -17,6 +18,27 @@ body {
     margin: 24px;
     background: var(--bg);
     color: var(--foreground);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.logo {
+    width: 64px !important;
+    height: 64px !important;
+    max-width: 64px !important;
+    max-height: 64px !important;
+    display: block;
+}
+
+.tagline {
+    color: var(--comment);
+    font-size: 0.95rem;
+    margin-top: -4px;
 }
 
 a { color: var(--cyan); text-decoration: none; }
@@ -34,6 +56,7 @@ h3 {
 }
 
 nav {
+    margin-top: 24px;
     margin-bottom: 24px;
     display: flex;
     gap: 12px;
@@ -45,10 +68,12 @@ nav a {
     padding: 8px 12px;
     border-radius: 8px;
     border: 1px solid var(--current-line);
+    transition: all 0.15s ease;
 }
 
 nav a:hover {
     border-color: var(--purple);
+    background: #2a2638;
 }
 
 table {
@@ -87,14 +112,17 @@ button {
     font-weight: 700;
 }
 
-button:hover { background: var(--pink); }
+button:hover { 
+    background: var(--pink);
+    transform: translateY(-1px);
+}
 
 .card {
     background: #21222c;
     padding: 16px;
     border-radius: 12px;
     margin-bottom: 18px;
-    border: 1px solid var(--current-line);
+    border: 1px solid #3b3750;
     transition: all 0.15s ease;
 }
 

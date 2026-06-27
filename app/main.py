@@ -23,8 +23,7 @@ templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 
 ACCESS_OPTIONS = ["Own", "Game Pass", "Free-to-play", "Shared Library", "No Access", "Unknown"]
 INSTALLED_OPTIONS = ["Yes", "No", "Unknown"]
-CROSSPLAY_OPTIONS = ["Yes", "No", "Partial", "Unknown"]
-
+CROSSPLAY_OPTIONS = ["Yes", "No", "Partial", "Possible", "Unknown"]
 ACCESS_OK = {"Own", "Game Pass", "Free-to-play", "Shared Library"}
 
 
@@ -141,7 +140,8 @@ def classify_game(player_values, game):
 
     if pc_xbox == "No":
         return "Blocked by platform"
-
+    if pc_xbox == "Unknown":
+        return "Mixed"
     if installed_count == total and access_count == total and pc_xbox in {"Yes", "Partial"}:
         return "Ready tonight"
 
@@ -189,8 +189,16 @@ def get_recommendations(players, rows):
         score = (access_count * 2) + installed_count
 
         pc_xbox = game["pc_xbox_crossplay"] or game["crossplay"] or "Unknown"
-        if pc_xbox == "No":
-            score -= 3
+        if pc_xbox == "Yes":
+            score += 3
+        elif pc_xbox == "Partial":
+            score += 1
+        elif pc_xbox == "Possible":
+            score += 1
+        elif pc_xbox == "No":
+            score -= 5
+        elif pc_xbox == "Unknown":
+            score -= 1
 
         recommendations.append({
             "game": game,
@@ -336,6 +344,29 @@ def add_game(
                 ),
             )
 
+        conn.commit()
+
+    return RedirectResponse("/games", status_code=303)
+
+@app.post("/game-crossplay/update")
+def update_game_crossplay(
+    game_id: int = Form(...),
+    pc_xbox_crossplay: str = Form("Unknown"),
+    crossplay_notes: str = Form(""),
+):
+    if pc_xbox_crossplay not in CROSSPLAY_OPTIONS:
+        pc_xbox_crossplay = "Unknown"
+
+    with db() as conn:
+        conn.execute(
+            """
+            UPDATE games
+            SET pc_xbox_crossplay = ?,
+                crossplay_notes = ?
+            WHERE id = ?
+            """,
+            (pc_xbox_crossplay, crossplay_notes.strip(), game_id),
+        )
         conn.commit()
 
     return RedirectResponse("/games", status_code=303)
