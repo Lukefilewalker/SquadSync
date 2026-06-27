@@ -4,90 +4,53 @@
 <h2>SquadSync Dashboard</h2>
 
 <p class="small">
-Games are automatically grouped based on ownership, installation status, and PC/Xbox compatibility.
+    Best options are ranked by access, install status, and PC/Xbox compatibility.
 </p>
 
-{% for bucket, items in buckets.items() %}
-
 <div class="card">
-    <h2>{{ bucket }}</h2>
+    <h2>Best Options Tonight</h2>
 
-{% if items %}
-    <ul>
-    {% for row in items %}
-        <li>
-            <strong>{{ row.game.title }}</strong>
-            <div class="small">
-                PC/Xbox Crossplay:
-                {{ row.game.pc_xbox_crossplay or row.game.crossplay }}
-                |
-                Players:
-                {{ row.game.min_players }}-{{ row.game.max_players }}
-
-                {% if row.game.tags %}
-                |
-                {{ row.game.tags }}
-                {% endif %}
-            </div>
-
-            {% if row.game.crossplay_notes %}
-            <div class="small">
-                {{ row.game.crossplay_notes }}
-            </div>
-            {% endif %}
-        </li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p class="small">Nothing here yet.</p>
-{% endif %}
-
+    {% if recommendations %}
+        <ol>
+        {% for item in recommendations[:5] %}
+            <li>
+                <strong>{{ item.game.title }}</strong>
+                <div class="small">
+                    Score: {{ item.score }} |
+                    Access: {{ item.access_count }}/{{ item.total_players }} |
+                    Installed: {{ item.installed_count }}/{{ item.total_players }} |
+                    PC/Xbox: {{ item.pc_xbox_crossplay }}
+                </div>
+            </li>
+        {% endfor %}
+        </ol>
+    {% else %}
+        <p class="small">No recommendations yet.</p>
+    {% endif %}
 </div>
-{% endfor %}
 
-<h2>Full Matrix</h2>
+<div class="grid">
+    {% for bucket, items in buckets.items() %}
+    <div class="card">
+        <h2>{{ bucket }} ({{ items|length }})</h2>
 
-<table>
-    <tr>
-        <th>Game</th>
-    {% for player in players %}
-    <th>{{ player.name }}</th>
-    {% endfor %}
-
-    <th>Crossplay</th>
-</tr>
-
-{% for row in rows %}
-<tr>
-    <td>
-        <strong>{{ row.game.title }}</strong>
-        <br>
-        <span class="small">{{ row.game.tags }}</span>
-    </td>
-
-    {% for player in players %}
-    {% set pdata = row.player_data[player.id] %}
-    <td>
-        <strong>{{ pdata.access }}</strong><br>
-
-        {% if pdata.installed == "Yes" %}
-            <span class="status-installed">Installed</span>
-        {% elif pdata.installed == "No" %}
-            Not Installed
+        {% if items %}
+            <ul>
+            {% for row in items %}
+                <li>
+                    <strong>{{ row.game.title }}</strong>
+                    <div class="small">
+                        PC/Xbox: {{ row.game.pc_xbox_crossplay or row.game.crossplay }} |
+                        Players: {{ row.game.min_players }}-{{ row.game.max_players }}
+                    </div>
+                </li>
+            {% endfor %}
+            </ul>
         {% else %}
-            Unknown
+            <p class="small">Nothing here yet.</p>
         {% endif %}
-
-        {% if pdata.platform %}
-        <br><span class="small">{{ pdata.platform }}</span>
-        {% endif %}
-    </td>
+    </div>
     {% endfor %}
+</div>
 
-    <td>
-        {{ row.game.pc_xbox_crossplay or row.game.crossplay }}
-    </td>
-</tr>
-{% endfor %}
-</table>
 {% endblock %}

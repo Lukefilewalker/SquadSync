@@ -3,6 +3,7 @@ import os
 import sqlite3
 from datetime import datetime
 import requests
+from fastapi.staticfiles import StaticFiles
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import RedirectResponse
@@ -17,6 +18,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / "gamenight.db"
 
 app = FastAPI(title="SquadSync")
+app.mount("/static", StaticFiles(directory=str(APP_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 
 ACCESS_OPTIONS = ["Own", "Game Pass", "Free-to-play", "Shared Library", "No Access", "Unknown"]
@@ -153,10 +155,55 @@ def classify_game(player_values, game):
         return "Needs purchase/access"
 
     if unknown_count > 0 or pc_xbox == "Unknown":
-        return "Missing info"
+        return "Mixed"
 
     return "Mixed"
 
+def get_recommendations(players, rows):
+    recommendations = []
+
+    for row in rows:
+        game = row["game"]
+        player_data = row["player_data"]
+
+        access_count = 0
+        installed_count = 0
+        no_access_count = 0
+        unknown_count = 0
+
+        for player in players:
+            pdata = player_data[player["id"]]
+
+            if pdata["access"] in ACCESS_OK:
+                access_count += 1
+
+            if pdata["installed"] == "Yes":
+                installed_count += 1
+
+            if pdata["access"] == "No Access":
+                no_access_count += 1
+
+            if pdata["access"] == "Unknown" or pdata["installed"] == "Unknown":
+                unknown_count += 1
+
+        score = (access_count * 2) + installed_count
+
+        pc_xbox = game["pc_xbox_crossplay"] or game["crossplay"] or "Unknown"
+        if pc_xbox == "No":
+            score -= 3
+
+        recommendations.append({
+            "game": game,
+            "score": score,
+            "access_count": access_count,
+            "installed_count": installed_count,
+            "no_access_count": no_access_count,
+            "unknown_count": unknown_count,
+            "total_players": len(players),
+            "pc_xbox_crossplay": pc_xbox,
+        })
+
+    return sorted(recommendations, key=lambda item: item["score"], reverse=True)
 
 @app.get("/")
 def dashboard(request: Request):
@@ -169,7 +216,6 @@ def dashboard(request: Request):
             "Everyone has access": [],
             "Blocked by platform": [],
             "Needs purchase/access": [],
-            "Missing info": [],
             "Mixed": [],
         }
 
@@ -178,6 +224,8 @@ def dashboard(request: Request):
             bucket = classify_game(values, row["game"])
             buckets[bucket].append(row)
 
+        recommendations = get_recommendations(players, rows)
+
         return templates.TemplateResponse(
             "dashboard.html",
             {
@@ -185,6 +233,7 @@ def dashboard(request: Request):
                 "players": players,
                 "rows": rows,
                 "buckets": buckets,
+                "recommendations": recommendations,
             },
         )
 
@@ -205,6 +254,19 @@ def games(request: Request):
             },
         )
 
+@app.get("/matrix")
+def matrix(request: Request):
+    with db() as conn:
+        players, rows = get_matrix(conn)
+
+        return templates.TemplateResponse(
+            "matrix.html",
+            {
+                "request": request,
+                "players": players,
+                "rows": rows,
+            },
+        )
 
 @app.post("/games/add")
 def add_game(

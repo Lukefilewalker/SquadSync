@@ -3,83 +3,7 @@
 <head>
     <title>SquadSync</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            margin: 24px;
-            background: #111827;
-            color: #f9fafb;
-        }
-        a { color: #93c5fd; text-decoration: none; }
-        nav { margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #1f2937;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 24px;
-        }
-        .table-wrapper {
-           overflow-x: auto;
-           width: 100%;
-        }
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #374151;
-            text-align: left;
-            vertical-align: top;
-        }
-        th { background: #273449; }
-        input, select {
-            padding: 8px;
-            border-radius: 8px;
-            border: 1px solid #4b5563;
-            background: #111827;
-            color: #f9fafb;
-        }
-        button {
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 0;
-            background: #2563eb;
-            color: white;
-            cursor: pointer;
-        }
-        .card {
-            background: #1f2937;
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 18px;
-        }
-        .status-installed { color: #86efac; font-weight: 700; }
-        .status-owned { color: #bfdbfe; font-weight: 700; }
-        .status-game-pass { color: #c4b5fd; font-weight: 700; }
-        .status-not-owned { color: #fca5a5; font-weight: 700; }
-        .status-unknown { color: #d1d5db; }
-        .small { color: #d1d5db; font-size: 0.9rem; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-        form.inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-        @media (max-width: 768px) {
-    body {
-        margin: 12px;
-    }
-
-    h1 {
-        font-size: 2rem;
-    }
-
-    table {
-        min-width: 900px;
-    }
-
-    input,
-    select,
-    button {
-        max-width: 100%;
-    }
-}
-    </style>
+    <link rel="stylesheet" href="/static/styles.css?v=5">
 </head>
 <body>
     <h1>SquadSync</h1>
@@ -88,6 +12,7 @@
         <a href="/">Dashboard</a>
         <a href="/games">Games</a>
         <a href="/players">Players</a>
+        <a href="/matrix">Matrix</a>
     </nav>
     {% block content %}{% endblock %}
 </body>

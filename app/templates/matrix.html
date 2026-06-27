@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Game Matrix</h2>
+
+<p class="small">
+    Full ownership, install status, platform, and store matrix.
+</p>
+
+{% for row in rows %}
+<div class="card">
+
+    {% if row.game.background_image %}
+    <img
+        src="{{ row.game.background_image }}"
+        alt="{{ row.game.title }}"
+        style="width:250px; border-radius:12px; margin-bottom:12px;">
+    {% endif %}
+
+    <h3>{{ row.game.title }}</h3>
+
+    <p class="small">
+        Released: {{ row.game.released }}
+        <br>
+        Genres: {{ row.game.genres }}
+        <br>
+        Platforms: {{ row.game.platforms }}
+    </p>
+
+    <table>
+        <tr>
+            <th>Player</th>
+            <th>Access</th>
+            <th>Installed</th>
+            <th>Platform</th>
+            <th>Store</th>
+        </tr>
+
+        {% for player in players %}
+        <tr>
+            <td>{{ player.name }}</td>
+            <td>{{ row.player_data[player.id].access }}</td>
+            <td>{{ row.player_data[player.id].installed }}</td>
+            <td>{{ row.player_data[player.id].platform }}</td>
+            <td>{{ row.player_data[player.id].store }}</td>
+        </tr>
+        {% endfor %}
+
+    </table>
+
+</div>
+{% endfor %}
+
+{% endblock %}

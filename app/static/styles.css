@@ -1,0 +1,143 @@
+:root {
+    --bg: #282a36;
+    --current-line: #44475a;
+    --foreground: #f8f8f2;
+    --comment: #6272a4;
+    --cyan: #8be9fd;
+    --green: #50fa7b;
+    --orange: #ffb86c;
+    --pink: #ff79c6;
+    --purple: #bd93f9;
+    --red: #ff5555;
+    --yellow: #f1fa8c;
+}
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 24px;
+    background: var(--bg);
+    color: var(--foreground);
+}
+
+a { color: var(--cyan); text-decoration: none; }
+a:hover { color: var(--pink); }
+
+h1 {
+    color: var(--purple);
+    margin-bottom: 4px;
+}
+h2 {
+    color: var(--cyan);
+}
+h3 {
+    color: var(--yellow);
+}
+
+nav {
+    margin-bottom: 24px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+nav a {
+    background: #21222c;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--current-line);
+}
+
+nav a:hover {
+    border-color: var(--purple);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--current-line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+th, td {
+    padding: 10px;
+    border-bottom: 1px solid var(--comment);
+    text-align: left;
+    vertical-align: top;
+}
+
+th { background: #343746; }
+
+input, select {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--comment);
+    background: #21222c;
+    color: var(--foreground);
+}
+
+button {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 0;
+    background: var(--purple);
+    color: #191a21;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+button:hover { background: var(--pink); }
+
+.card {
+    background: #21222c;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    border: 1px solid var(--current-line);
+    transition: all 0.15s ease;
+}
+
+.card:hover {
+    border-color: var(--purple);
+}
+
+.card h2 {
+    margin-top: 0;
+}
+
+.status-installed { color: var(--green); font-weight: 700; }
+.status-owned { color: var(--cyan); font-weight: 700; }
+.status-game-pass { color: var(--purple); font-weight: 700; }
+.status-not-owned { color: var(--red); font-weight: 700; }
+.status-unknown { color: var(--comment); }
+
+.small {
+    color: var(--purple);
+    font-size: 1rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+form.inline {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    body { margin: 12px; }
+    h1 { font-size: 2rem; }
+    table { min-width: 900px; }
+    input, select, button { max-width: 100%; }
+}
