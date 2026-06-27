@@ -216,33 +216,67 @@ def add_game(
     notes: str = Form(""),
     crossplay_notes: str = Form(""),
 ):
+    clean_title = title.strip()
+
     if pc_xbox_crossplay not in CROSSPLAY_OPTIONS:
         pc_xbox_crossplay = "Unknown"
 
+    metadata = fetch_rawg_metadata(clean_title)
+
     with db() as conn:
-        conn.execute(
-            """
-            INSERT OR IGNORE INTO games(
-                title, crossplay, pc_xbox_crossplay, min_players, max_players,
-                tags, notes, crossplay_notes
+        if metadata:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO games(
+                    title, crossplay, pc_xbox_crossplay, min_players, max_players,
+                    tags, notes, crossplay_notes,
+                    rawg_id, released, genres, platforms,
+                    background_image, description, metadata_synced_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    metadata["title"],
+                    pc_xbox_crossplay,
+                    pc_xbox_crossplay,
+                    min_players,
+                    max_players,
+                    tags.strip(),
+                    notes.strip(),
+                    crossplay_notes.strip(),
+                    metadata["rawg_id"],
+                    metadata["released"],
+                    metadata["genres"],
+                    metadata["platforms"],
+                    metadata["background_image"],
+                    metadata["description"],
+                    datetime.now().isoformat(timespec="seconds"),
+                ),
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                title.strip(),
-                pc_xbox_crossplay,
-                pc_xbox_crossplay,
-                min_players,
-                max_players,
-                tags.strip(),
-                notes.strip(),
-                crossplay_notes.strip(),
-            ),
-        )
+        else:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO games(
+                    title, crossplay, pc_xbox_crossplay, min_players, max_players,
+                    tags, notes, crossplay_notes
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    clean_title,
+                    pc_xbox_crossplay,
+                    pc_xbox_crossplay,
+                    min_players,
+                    max_players,
+                    tags.strip(),
+                    notes.strip(),
+                    crossplay_notes.strip(),
+                ),
+            )
+
         conn.commit()
 
     return RedirectResponse("/games", status_code=303)
-
 
 @app.post("/player-game/update")
 def update_player_game(

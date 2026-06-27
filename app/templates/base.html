@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-    <title>Game Night Finder</title>
+    <title>SquadSync</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
@@ -19,6 +19,10 @@
             border-radius: 10px;
             overflow: hidden;
             margin-bottom: 24px;
+        }
+        .table-wrapper {
+           overflow-x: auto;
+           width: 100%;
         }
         th, td {
             padding: 10px;
@@ -56,10 +60,30 @@
         .small { color: #d1d5db; font-size: 0.9rem; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
         form.inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        @media (max-width: 768px) {
+    body {
+        margin: 12px;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    table {
+        min-width: 900px;
+    }
+
+    input,
+    select,
+    button {
+        max-width: 100%;
+    }
+}
     </style>
 </head>
 <body>
-    <h1>Game Night Finder</h1>
+    <h1>SquadSync</h1>
+    <p class="small">Multiplayer Library & Game Night Planner</p>
     <nav>
         <a href="/">Dashboard</a>
         <a href="/games">Games</a>

@@ -9,18 +9,6 @@
 
     <form class="inline" method="post" action="/games/add">
         <input name="title" placeholder="Game title" required>
-
-        <select name="pc_xbox_crossplay">
-            {% for option in crossplay_options %}
-                <option value="{{ option }}" {% if option == "Unknown" %}selected{% endif %}>PC/Xbox Crossplay: {{ option }}</option>
-            {% endfor %}
-        </select>
-
-        <input name="min_players" type="number" value="1" min="1" style="width: 90px;" title="Minimum players">
-        <input name="max_players" type="number" value="4" min="1" style="width: 90px;" title="Maximum players">
-        <input name="tags" placeholder="Tags: Co-op,FPS,PvP">
-        <input name="notes" placeholder="Game notes">
-        <input name="crossplay_notes" placeholder="Crossplay notes">
         <button>Add</button>
     </form>
 </div>
