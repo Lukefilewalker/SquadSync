@@ -13,17 +13,26 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH = DATA_DIR / "gamenight.db"
 
-app = FastAPI(title="Game Night Finder")
+app = FastAPI(title="SquadSync")
 templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 
-STATUSES = ["Installed", "Owned", "Game Pass", "Not Owned", "Unknown"]
-ACCESS_STATUSES = {"Installed", "Owned", "Game Pass"}
+ACCESS_OPTIONS = ["Own", "Game Pass", "Free-to-play", "Shared Library", "No Access", "Unknown"]
+INSTALLED_OPTIONS = ["Yes", "No", "Unknown"]
+CROSSPLAY_OPTIONS = ["Yes", "No", "Partial", "Unknown"]
+
+ACCESS_OK = {"Own", "Game Pass", "Free-to-play", "Shared Library"}
 
 
 def db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def add_column_if_missing(conn, table, column, definition):
+    cols = [row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+    if column not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
 def init_db():
@@ -60,33 +69,11 @@ def init_db():
             """
         )
 
-        players = [
-            "Steven",
-            "Nick Dragswolf",
-            "Anthony Folden",
-            "Ray Holt",
-            "Derek Uran",
-            "Kenny Hissong",
-        ]
-        for name in players:
-            conn.execute("INSERT OR IGNORE INTO players(name) VALUES (?)", (name,))
-
-        starter_games = [
-            ("Halo Infinite", "Yes", 1, 24, "FPS,PvP,Free-to-play", "PC/Xbox crossplay"),
-            ("Sea of Thieves", "Yes", 1, 4, "Co-op,PvP,Game Pass", "Good Xbox/PC option"),
-            ("Fortnite", "Yes", 1, 4, "Free-to-play,Battle Royale", "Easy cross-platform fallback"),
-            ("Deep Rock Galactic", "Partial", 1, 4, "Co-op,Game Pass", "Check store compatibility"),
-            ("Valheim", "Yes", 1, 10, "Survival,Co-op", "Crossplay support depends on setup"),
-            ("Minecraft", "Partial", 1, 8, "Survival,Co-op", "Bedrock is crossplay, Java is not"),
-        ]
-        for title, crossplay, min_p, max_p, tags, notes in starter_games:
-            conn.execute(
-                """
-                INSERT OR IGNORE INTO games(title, crossplay, min_players, max_players, tags, notes)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (title, crossplay, min_p, max_p, tags, notes),
-            )
+        add_column_if_missing(conn, "player_games", "access", "TEXT DEFAULT 'Unknown'")
+        add_column_if_missing(conn, "player_games", "installed", "TEXT DEFAULT 'Unknown'")
+        add_column_if_missing(conn, "player_games", "store", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "pc_xbox_crossplay", "TEXT DEFAULT 'Unknown'")
+        add_column_if_missing(conn, "games", "crossplay_notes", "TEXT DEFAULT ''")
 
         conn.commit()
 
@@ -110,42 +97,61 @@ def get_matrix(conn):
 
     rows = []
     for game in games:
-        statuses = {}
+        player_data = {}
         for player in players:
             pg = conn.execute(
                 """
-                SELECT status, platform, notes
+                SELECT access, installed, platform, store, notes
                 FROM player_games
                 WHERE player_id = ? AND game_id = ?
                 """,
                 (player["id"], game["id"]),
             ).fetchone()
-            statuses[player["id"]] = dict(pg) if pg else {
-                "status": "Unknown",
+
+            player_data[player["id"]] = dict(pg) if pg else {
+                "access": "Unknown",
+                "installed": "Unknown",
                 "platform": "",
+                "store": "",
                 "notes": "",
             }
-        rows.append({"game": game, "statuses": statuses})
+
+        rows.append({"game": game, "player_data": player_data})
+
     return players, rows
 
 
-def classify_game(status_values):
-    total = len(status_values)
-    installed = sum(1 for s in status_values if s == "Installed")
-    accessible = sum(1 for s in status_values if s in ACCESS_STATUSES)
-    unknown = sum(1 for s in status_values if s == "Unknown")
-    not_owned = sum(1 for s in status_values if s == "Not Owned")
+def classify_game(player_values, game):
+    total = len(player_values)
 
-    if installed == total:
+    access_count = sum(1 for v in player_values if v["access"] in ACCESS_OK)
+    installed_count = sum(1 for v in player_values if v["installed"] == "Yes")
+    no_access_count = sum(1 for v in player_values if v["access"] == "No Access")
+    unknown_count = sum(
+        1 for v in player_values
+        if v["access"] == "Unknown" or v["installed"] == "Unknown"
+    )
+
+    pc_xbox = game["pc_xbox_crossplay"] or game["crossplay"] or "Unknown"
+
+    if pc_xbox == "No":
+        return "Blocked by platform"
+
+    if installed_count == total and access_count == total and pc_xbox in {"Yes", "Partial"}:
         return "Ready tonight"
-    if accessible == total and installed >= total - 2:
-        return "One download away"
-    if accessible == total:
+
+    if access_count == total and installed_count < total:
+        return "Install needed"
+
+    if access_count == total:
         return "Everyone has access"
-    if not_owned > 0:
-        return "Needs purchase"
-    if unknown > 0:
-        return "Unknown"
+
+    if no_access_count > 0:
+        return "Needs purchase/access"
+
+    if unknown_count > 0 or pc_xbox == "Unknown":
+        return "Missing info"
+
     return "Mixed"
 
 
@@ -153,18 +159,20 @@ def classify_game(status_values):
 def dashboard(request: Request):
     with db() as conn:
         players, rows = get_matrix(conn)
+
         buckets = {
             "Ready tonight": [],
-            "One download away": [],
+            "Install needed": [],
             "Everyone has access": [],
-            "Needs purchase": [],
-            "Unknown": [],
+            "Blocked by platform": [],
+            "Needs purchase/access": [],
+            "Missing info": [],
             "Mixed": [],
         }
 
         for row in rows:
-            status_values = [row["statuses"][p["id"]]["status"] for p in players]
-            bucket = classify_game(status_values)
+            values = [row["player_data"][p["id"]] for p in players]
+            bucket = classify_game(values, row["game"])
             buckets[bucket].append(row)
 
         return templates.TemplateResponse(
@@ -188,7 +196,9 @@ def games(request: Request):
                 "request": request,
                 "players": players,
                 "rows": rows,
-                "statuses": STATUSES,
+                "access_options": ACCESS_OPTIONS,
+                "installed_options": INSTALLED_OPTIONS,
+                "crossplay_options": CROSSPLAY_OPTIONS,
             },
         )
 
@@ -196,21 +206,38 @@ def games(request: Request):
 @app.post("/games/add")
 def add_game(
     title: str = Form(...),
-    crossplay: str = Form("Unknown"),
+    pc_xbox_crossplay: str = Form("Unknown"),
     min_players: int = Form(1),
     max_players: int = Form(4),
     tags: str = Form(""),
     notes: str = Form(""),
+    crossplay_notes: str = Form(""),
 ):
+    if pc_xbox_crossplay not in CROSSPLAY_OPTIONS:
+        pc_xbox_crossplay = "Unknown"
+
     with db() as conn:
         conn.execute(
             """
-            INSERT OR IGNORE INTO games(title, crossplay, min_players, max_players, tags, notes)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT OR IGNORE INTO games(
+                title, crossplay, pc_xbox_crossplay, min_players, max_players,
+                tags, notes, crossplay_notes
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (title.strip(), crossplay.strip(), min_players, max_players, tags.strip(), notes.strip()),
+            (
+                title.strip(),
+                pc_xbox_crossplay,
+                pc_xbox_crossplay,
+                min_players,
+                max_players,
+                tags.strip(),
+                notes.strip(),
+                crossplay_notes.strip(),
+            ),
         )
         conn.commit()
+
     return RedirectResponse("/games", status_code=303)
 
 
@@ -218,28 +245,59 @@ def add_game(
 def update_player_game(
     player_id: int = Form(...),
     game_id: int = Form(...),
-    status: str = Form(...),
+    access: str = Form("Unknown"),
+    installed: str = Form("Unknown"),
     platform: str = Form(""),
+    store: str = Form(""),
     notes: str = Form(""),
 ):
-    if status not in STATUSES:
-        status = "Unknown"
+    if access not in ACCESS_OPTIONS:
+        access = "Unknown"
+
+    if installed not in INSTALLED_OPTIONS:
+        installed = "Unknown"
+
+    legacy_status = "Unknown"
+    if installed == "Yes":
+        legacy_status = "Installed"
+    elif access == "Own":
+        legacy_status = "Owned"
+    elif access == "Game Pass":
+        legacy_status = "Game Pass"
+    elif access == "No Access":
+        legacy_status = "Not Owned"
 
     with db() as conn:
         conn.execute(
             """
-            INSERT INTO player_games(player_id, game_id, status, platform, notes, updated_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO player_games(
+                player_id, game_id, status, access, installed,
+                platform, store, notes, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(player_id, game_id)
             DO UPDATE SET
                 status = excluded.status,
+                access = excluded.access,
+                installed = excluded.installed,
                 platform = excluded.platform,
+                store = excluded.store,
                 notes = excluded.notes,
                 updated_at = CURRENT_TIMESTAMP
             """,
-            (player_id, game_id, status, platform.strip(), notes.strip()),
+            (
+                player_id,
+                game_id,
+                legacy_status,
+                access,
+                installed,
+                platform.strip(),
+                store.strip(),
+                notes.strip(),
+            ),
         )
         conn.commit()
+
     return RedirectResponse("/games", status_code=303)
 
 
@@ -258,4 +316,5 @@ def add_player(name: str = Form(...)):
     with db() as conn:
         conn.execute("INSERT OR IGNORE INTO players(name) VALUES (?)", (name.strip(),))
         conn.commit()
+
     return RedirectResponse("/players", status_code=303)

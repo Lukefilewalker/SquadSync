@@ -3,33 +3,49 @@
 
 <div class="card">
     <h2>Add Game</h2>
+    <p class="small">
+        Add shared game info here. Player-specific info like access, installed status, platform, and store is edited below.
+    </p>
+
     <form class="inline" method="post" action="/games/add">
         <input name="title" placeholder="Game title" required>
-        <input name="crossplay" placeholder="Crossplay: Yes/No/Partial/Unknown" value="Unknown">
-        <input name="min_players" type="number" value="1" min="1" style="width: 90px;">
-        <input name="max_players" type="number" value="4" min="1" style="width: 90px;">
-        <input name="tags" placeholder="Tags">
-        <input name="notes" placeholder="Notes">
+
+        <select name="pc_xbox_crossplay">
+            {% for option in crossplay_options %}
+                <option value="{{ option }}" {% if option == "Unknown" %}selected{% endif %}>PC/Xbox Crossplay: {{ option }}</option>
+            {% endfor %}
+        </select>
+
+        <input name="min_players" type="number" value="1" min="1" style="width: 90px;" title="Minimum players">
+        <input name="max_players" type="number" value="4" min="1" style="width: 90px;" title="Maximum players">
+        <input name="tags" placeholder="Tags: Co-op,FPS,PvP">
+        <input name="notes" placeholder="Game notes">
+        <input name="crossplay_notes" placeholder="Crossplay notes">
         <button>Add</button>
     </form>
 </div>
 
-<h2>Edit Library Status</h2>
+<h2>Edit Library Info</h2>
 
 {% for row in rows %}
 <div class="card">
     <h3>{{ row.game.title }}</h3>
     <p class="small">
-        Crossplay: {{ row.game.crossplay }} |
+        PC/Xbox Crossplay: {{ row.game.pc_xbox_crossplay or row.game.crossplay }} |
         Players: {{ row.game.min_players }}-{{ row.game.max_players }} |
-        {{ row.game.tags }}
+        Tags: {{ row.game.tags }}
+        {% if row.game.crossplay_notes %}
+            <br>Crossplay Notes: {{ row.game.crossplay_notes }}
+        {% endif %}
     </p>
 
     <table>
         <tr>
             <th>Player</th>
-            <th>Status</th>
+            <th>Access</th>
+            <th>Installed</th>
             <th>Platform</th>
+            <th>Store</th>
             <th>Notes</th>
             <th>Save</th>
         </tr>
@@ -38,16 +54,28 @@
             <form method="post" action="/player-game/update">
                 <input type="hidden" name="player_id" value="{{ player.id }}">
                 <input type="hidden" name="game_id" value="{{ row.game.id }}">
+
                 <td>{{ player.name }}</td>
+
                 <td>
-                    <select name="status">
-                        {% for status in statuses %}
-                            <option value="{{ status }}" {% if row.statuses[player.id].status == status %}selected{% endif %}>{{ status }}</option>
+                    <select name="access">
+                        {% for option in access_options %}
+                            <option value="{{ option }}" {% if row.player_data[player.id].access == option %}selected{% endif %}>{{ option }}</option>
                         {% endfor %}
                     </select>
                 </td>
-                <td><input name="platform" value="{{ row.statuses[player.id].platform }}" placeholder="PC, Xbox, Steam Deck"></td>
-                <td><input name="notes" value="{{ row.statuses[player.id].notes }}" placeholder="Optional"></td>
+
+                <td>
+                    <select name="installed">
+                        {% for option in installed_options %}
+                            <option value="{{ option }}" {% if row.player_data[player.id].installed == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+
+                <td><input name="platform" value="{{ row.player_data[player.id].platform }}" placeholder="PC, Xbox, Steam Deck"></td>
+                <td><input name="store" value="{{ row.player_data[player.id].store }}" placeholder="Steam, Xbox, Epic"></td>
+                <td><input name="notes" value="{{ row.player_data[player.id].notes }}" placeholder="Optional"></td>
                 <td><button>Save</button></td>
             </form>
         </tr>
