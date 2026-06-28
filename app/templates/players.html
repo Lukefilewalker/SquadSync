@@ -10,10 +10,75 @@
 </div>
 
 <h2>Players</h2>
-<ul>
+
 {% for player in players %}
-    <li>{{ player.name }}</li>
+<div class="card">
+    <form method="post" action="/players/update">
+        <input type="hidden" name="player_id" value="{{ player.id }}">
+
+        <div class="grid">
+            <div>
+                <label class="small">Display Name</label><br>
+                <input name="name" value="{{ player.name }}" required>
+            </div>
+
+            <div>
+                <label class="small">Xbox Gamertag</label><br>
+                <input name="xbox_gamertag" value="{{ player.xbox_gamertag }}" placeholder="Xbox name">
+            </div>
+
+            <div>
+                <label class="small">Discord Username</label><br>
+                <input name="discord_username" value="{{ player.discord_username }}" placeholder="Discord name">
+            </div>
+
+            <div>
+                <label class="small">Twitch Username</label><br>
+                <input name="twitch_username" value="{{ player.twitch_username }}" placeholder="Twitch name">
+            </div>
+
+            <div>
+                <label class="small">Preferred Voice</label><br>
+                <select name="preferred_voice">
+                    {% for option in voice_options %}
+                        <option value="{{ option }}" {% if player.preferred_voice == option %}selected{% endif %}>
+                            {{ option }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+<div>
+    <label class="small">Playing Tonight</label><br>
+
+    {% if player.active_tonight %}
+        <span class="status-installed">Active tonight</span>
+        <form method="post" action="/players/set-active" style="display:inline;">
+            <input type="hidden" name="player_id" value="{{ player.id }}">
+            <input type="hidden" name="active_tonight" value="0">
+            <button type="submit">Set Inactive</button>
+        </form>
+    {% else %}
+        <span class="status-not-owned">Inactive tonight</span>
+        <form method="post" action="/players/set-active" style="display:inline;">
+            <input type="hidden" name="player_id" value="{{ player.id }}">
+            <input type="hidden" name="active_tonight" value="1">
+            <button type="submit">Set Active</button>
+        </form>
+    {% endif %}
+</div>
+
+            <div>
+                <label class="small">Notes</label><br>
+                <input name="notes" value="{{ player.notes }}" placeholder="Optional notes">
+            </div>
+        </div>
+
+        <p>
+            <button type="submit">Save Player</button>
+        </p>
+    </form>
+</div>
 {% endfor %}
-</ul>
 
 {% endblock %}

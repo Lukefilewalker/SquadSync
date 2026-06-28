@@ -78,6 +78,13 @@ def init_db():
         add_column_if_missing(conn, "player_games", "store", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "games", "pc_xbox_crossplay", "TEXT DEFAULT 'Unknown'")
         add_column_if_missing(conn, "games", "crossplay_notes", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "archived", "INTEGER DEFAULT 0")
+        add_column_if_missing(conn, "players", "xbox_gamertag", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "players", "discord_username", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "players", "twitch_username", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "players", "preferred_voice", "TEXT DEFAULT 'Either'")
+        add_column_if_missing(conn, "players", "notes", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "players", "active_tonight", "INTEGER DEFAULT 1")
 
         conn.commit()
 
@@ -86,14 +93,18 @@ def init_db():
 def startup():
     init_db()
 
-
 def get_players(conn):
-    return conn.execute("SELECT * FROM players ORDER BY name").fetchall()
-
+    return conn.execute("""
+        SELECT * FROM players
+        ORDER BY active_tonight DESC, name
+    """).fetchall() 
 
 def get_games(conn):
-    return conn.execute("SELECT * FROM games ORDER BY title").fetchall()
-
+    return conn.execute("""
+        SELECT * FROM games
+        WHERE COALESCE(archived, 0) = 0
+        ORDER BY title
+    """).fetchall()
 
 def get_matrix(conn):
     players = get_players(conn)
@@ -168,17 +179,24 @@ def get_recommendations(players, rows):
 
         access_count = 0
         installed_count = 0
+        ready_count = 0
         no_access_count = 0
         unknown_count = 0
 
         for player in players:
             pdata = player_data[player["id"]]
 
-            if pdata["access"] in ACCESS_OK:
+            has_access = pdata["access"] in ACCESS_OK
+            is_installed = pdata["installed"] == "Yes"
+
+            if has_access:
                 access_count += 1
 
-            if pdata["installed"] == "Yes":
+            if is_installed:
                 installed_count += 1
+
+            if has_access and is_installed:
+                ready_count += 1
 
             if pdata["access"] == "No Access":
                 no_access_count += 1
@@ -186,28 +204,43 @@ def get_recommendations(players, rows):
             if pdata["access"] == "Unknown" or pdata["installed"] == "Unknown":
                 unknown_count += 1
 
-        score = (access_count * 2) + installed_count
+        min_players = game["min_players"] or 1
+        max_players = game["max_players"] or 99
+
+        score = (ready_count * 8) + (installed_count * 4) + (access_count * 2)
 
         pc_xbox = game["pc_xbox_crossplay"] or game["crossplay"] or "Unknown"
         if pc_xbox == "Yes":
-            score += 3
+            score += 4
         elif pc_xbox == "Partial":
             score += 1
         elif pc_xbox == "Possible":
             score += 1
         elif pc_xbox == "No":
-            score -= 5
+            score -= 10
         elif pc_xbox == "Unknown":
-            score -= 1
+            score -= 2
+
+        squad_fit = "Fits group"
+        if ready_count < min_players:
+            score -= 8
+            squad_fit = "Not enough ready players"
+        elif ready_count > max_players:
+            score -= 12
+            squad_fit = "Too many ready players"
 
         recommendations.append({
             "game": game,
             "score": score,
             "access_count": access_count,
             "installed_count": installed_count,
+            "ready_count": ready_count,
             "no_access_count": no_access_count,
             "unknown_count": unknown_count,
             "total_players": len(players),
+            "min_players": min_players,
+            "max_players": max_players,
+            "squad_fit": squad_fit,
             "pc_xbox_crossplay": pc_xbox,
         })
 
@@ -217,6 +250,7 @@ def get_recommendations(players, rows):
 def dashboard(request: Request):
     with db() as conn:
         players, rows = get_matrix(conn)
+        players = [p for p in players if p["active_tonight"]]
 
         buckets = {
             "Ready tonight": [],
@@ -233,12 +267,14 @@ def dashboard(request: Request):
             buckets[bucket].append(row)
 
         recommendations = get_recommendations(players, rows)
+        active_player_names = [p["name"] for p in players]
 
         return templates.TemplateResponse(
             "dashboard.html",
             {
                 "request": request,
                 "players": players,
+                "active_player_names": active_player_names,
                 "rows": rows,
                 "buckets": buckets,
                 "recommendations": recommendations,
@@ -306,7 +342,6 @@ def add_game(
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    metadata["title"],
                     pc_xbox_crossplay,
                     pc_xbox_crossplay,
                     min_players,
@@ -344,6 +379,28 @@ def add_game(
                 ),
             )
 
+        conn.commit()
+
+    return RedirectResponse("/games", status_code=303)
+
+@app.post("/games/{game_id}/archive")
+def archive_game(game_id: int):
+    with db() as conn:
+        conn.execute(
+            "UPDATE games SET archived = 1 WHERE id = ?",
+            (game_id,)
+        )
+        conn.commit()
+
+    return RedirectResponse("/games", status_code=303)
+
+@app.post("/games/{game_id}/unarchive")
+def unarchive_game(game_id: int):
+    with db() as conn:
+        conn.execute(
+            "UPDATE games SET archived = 0 WHERE id = ?",
+            (game_id,)
+        )
         conn.commit()
 
     return RedirectResponse("/games", status_code=303)
@@ -493,7 +550,6 @@ def fetch_game_metadata(game_id: int):
                 """
                 UPDATE games
                 SET rawg_id = ?,
-                    title = ?,
                     released = ?,
                     genres = ?,
                     platforms = ?,
@@ -504,7 +560,6 @@ def fetch_game_metadata(game_id: int):
                 """,
                 (
                     metadata["rawg_id"],
-                    metadata["title"],
                     metadata["released"],
                     metadata["genres"],
                     metadata["platforms"],
@@ -539,7 +594,6 @@ def fetch_missing_metadata():
                     """
                     UPDATE games
                     SET rawg_id = ?,
-                        title = ?,
                         released = ?,
                         genres = ?,
                         platforms = ?,
@@ -550,7 +604,6 @@ def fetch_missing_metadata():
                     """,
                     (
                         metadata["rawg_id"],
-                        metadata["title"],
                         metadata["released"],
                         metadata["genres"],
                         metadata["platforms"],
@@ -571,7 +624,11 @@ def players(request: Request):
         people = get_players(conn)
         return templates.TemplateResponse(
             "players.html",
-            {"request": request, "players": people},
+            {
+                "request": request,
+                "players": people,
+                "voice_options": VOICE_OPTIONS,
+            },
         )
 
 
@@ -579,6 +636,64 @@ def players(request: Request):
 def add_player(name: str = Form(...)):
     with db() as conn:
         conn.execute("INSERT OR IGNORE INTO players(name) VALUES (?)", (name.strip(),))
+        conn.commit()
+
+    return RedirectResponse("/players", status_code=303)
+
+VOICE_OPTIONS = ["Discord", "Xbox Party", "In-game", "Either", "Unknown"]
+
+@app.post("/players/update")
+def update_player(
+    player_id: int = Form(...),
+    name: str = Form(...),
+    xbox_gamertag: str = Form(""),
+    discord_username: str = Form(""),
+    twitch_username: str = Form(""),
+    preferred_voice: str = Form("Either"),
+    active_tonight: int = Form(0),
+    notes: str = Form(""),
+):
+    if preferred_voice not in VOICE_OPTIONS:
+        preferred_voice = "Either"
+
+    with db() as conn:
+        conn.execute(
+            """
+            UPDATE players
+            SET name = ?,
+                xbox_gamertag = ?,
+                discord_username = ?,
+                twitch_username = ?,
+                preferred_voice = ?,
+                active_tonight = ?,
+                notes = ?
+            WHERE id = ?
+            """,
+            (
+                name.strip(),
+                xbox_gamertag.strip(),
+                discord_username.strip(),
+                twitch_username.strip(),
+                preferred_voice,
+                notes.strip(),
+                active_tonight,
+                player_id,
+            ),
+        )
+        conn.commit()
+
+    return RedirectResponse("/players", status_code=303)
+
+@app.post("/players/set-active")
+def set_player_active(
+    player_id: int = Form(...),
+    active_tonight: int = Form(...),
+):
+    with db() as conn:
+        conn.execute(
+            "UPDATE players SET active_tonight = ? WHERE id = ?",
+            (active_tonight, player_id),
+        )
         conn.commit()
 
     return RedirectResponse("/players", status_code=303)

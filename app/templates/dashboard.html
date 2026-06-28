@@ -6,7 +6,19 @@
 <p class="small">
     Best options are ranked by access, install status, and PC/Xbox compatibility.
 </p>
+<div class="card">
+    <h2>Current Active Squadmates</h2>
 
+    <p>
+        {{ active_player_names|length }} active players
+    </p>
+
+    <ul>
+    {% for name in active_player_names %}
+        <li>{{ name }}</li>
+    {% endfor %}
+    </ul>
+</div>
 <div class="card">
     <h2>Best Options Tonight</h2>
 
@@ -17,8 +29,11 @@
                 <strong>{{ item.game.title }}</strong>
                 <div class="small">
                     Score: {{ item.score }} |
+                    Ready: {{ item.ready_count }}/{{ item.total_players }} |
                     Access: {{ item.access_count }}/{{ item.total_players }} |
                     Installed: {{ item.installed_count }}/{{ item.total_players }} |
+                    Players: {{ item.min_players }}-{{ item.max_players }} |
+                    Fit: {{ item.squad_fit }} |
                     PC/Xbox: {{ item.pc_xbox_crossplay }}
                 </div>
             </li>
