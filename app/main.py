@@ -189,6 +189,7 @@ def get_recommendations(players, rows):
     for row in rows:
         game = row["game"]
         player_data = row["player_data"]
+        total_players = len(players)
 
         access_count = 0
         installed_count = 0
@@ -202,6 +203,9 @@ def get_recommendations(players, rows):
         mode_unknown_count = 0
         comp_ready_count = 0
         comp_not_ready_count = 0
+
+        reasons = []
+        warnings = []
 
         for player in players:
             pdata = player_data[player["id"]]
@@ -244,54 +248,90 @@ def get_recommendations(players, rows):
             min_players = game["squad_min"] or 1
             max_players = game["squad_max"] or 99
             squad_label = f"Squad: {min_players}-{max_players} verified"
+            reasons.append("Verified squad size")
         else:
             min_players = game["min_players"] or 1
             max_players = game["max_players"] or 99
             squad_label = f"Players: {min_players}-{max_players} unverified"
+            warnings.append("Squad size is unverified")
 
         score = (ready_count * 8) + (installed_count * 4) + (access_count * 2)
+
+        if total_players > 0:
+            if ready_count == total_players:
+                reasons.append("Everyone in the current squad is ready")
+            elif ready_count > 0:
+                reasons.append(f"{ready_count}/{total_players} current squad members are ready")
+
+            if access_count == total_players:
+                reasons.append("Everyone has access")
+            elif access_count > 0:
+                warnings.append(f"{total_players - access_count} current squad member(s) may need access")
+
+            if installed_count == total_players:
+                reasons.append("Everyone has it installed")
+            elif installed_count > 0:
+                warnings.append(f"{total_players - installed_count} current squad member(s) may need to install")
+
+            if unknown_count > 0:
+                warnings.append(f"{unknown_count} current squad member(s) have unknown access or install status")
 
         pc_xbox = game["pc_xbox_crossplay"] or game["crossplay"] or "Unknown"
         if pc_xbox == "Yes":
             score += 4
+            reasons.append("PC/Xbox crossplay supported")
         elif pc_xbox == "Partial":
             score += 1
+            warnings.append("Crossplay is partial")
         elif pc_xbox == "Possible":
             score += 1
+            warnings.append("Crossplay may be possible")
         elif pc_xbox == "No":
             score -= 10
+            warnings.append("PC/Xbox crossplay is not supported")
         elif pc_xbox == "Unknown":
             score -= 2
+            warnings.append("Crossplay status is unknown")
 
         squad_fit = "Fits group"
         if ready_count < min_players:
             score -= 8
             squad_fit = "Not enough ready players"
+            warnings.append("Not enough ready players for this squad size")
         elif ready_count > max_players:
             score -= 12
             squad_fit = "Too many ready players"
+            warnings.append("Too many ready players for this squad size")
+        else:
+            reasons.append("Fits the current squad size")
 
         mode_fit = "Unknown"
         if competitive_count > 0 and casual_count == 0:
             mode_fit = "Competitive fit"
             score += 3
+            reasons.append("Competitive preferences line up")
         elif casual_count > 0 and competitive_count == 0:
             mode_fit = "Casual fit"
             score += 2
+            reasons.append("Casual preferences line up")
         elif both_count > 0 and casual_count == 0 and competitive_count == 0:
             mode_fit = "Flexible"
             score += 1
+            reasons.append("Mode preferences are flexible")
         elif casual_count > 0 and competitive_count > 0:
             mode_fit = "Mixed preferences"
             score -= 2
+            warnings.append("Current squad has mixed casual and competitive preferences")
 
         if competitive_count > 0:
             if comp_not_ready_count > 0:
                 score -= 3
                 mode_fit = f"{mode_fit}, some not comp ready"
+                warnings.append("Some competitive players are not marked competitive-ready")
             elif comp_ready_count >= competitive_count:
                 score += 2
                 mode_fit = f"{mode_fit}, comp ready"
+                reasons.append("Competitive players are marked ready")
 
         recommendations.append({
             "game": game,
@@ -301,7 +341,7 @@ def get_recommendations(players, rows):
             "ready_count": ready_count,
             "no_access_count": no_access_count,
             "unknown_count": unknown_count,
-            "total_players": len(players),
+            "total_players": total_players,
             "min_players": min_players,
             "max_players": max_players,
             "squad_fit": squad_fit,
@@ -314,6 +354,8 @@ def get_recommendations(players, rows):
             "comp_ready_count": comp_ready_count,
             "comp_not_ready_count": comp_not_ready_count,
             "mode_fit": mode_fit,
+            "reasons": reasons,
+            "warnings": warnings,
         })
 
     return sorted(recommendations, key=lambda item: item["score"], reverse=True)
