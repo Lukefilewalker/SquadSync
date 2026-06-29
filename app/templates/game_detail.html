@@ -14,6 +14,21 @@
 
     <h2>{{ row.game.title }}</h2>
 
+<div class="action-row">
+    <form method="post"
+          action="/games/{{ row.game.id }}/fetch-metadata">
+        <button type="submit">Refresh Metadata</button>
+    </form>
+
+    <form method="post"
+          action="/games/{{ row.game.id }}/archive">
+        <button type="submit"
+                onclick="return confirm('Archive {{ row.game.title }}?');">
+            Archive
+        </button>
+    </form>
+</div>
+
     {% if row.game.released %}
         <p class="small">Released: {{ row.game.released }}</p>
     {% endif %}
@@ -58,6 +73,7 @@
             <form method="post" action="/player-game/update">
                 <input type="hidden" name="player_id" value="{{ player.id }}">
                 <input type="hidden" name="game_id" value="{{ row.game.id }}">
+                <input type="hidden" name="next_url" value="/games/{{ row.game.id }}">
 
                 <td>{{ player.name }}</td>
 

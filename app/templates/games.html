@@ -4,7 +4,7 @@
 <div class="card">
     <h2>Add Game</h2>
     <p class="small">
-        Add shared game info here. Player-specific info like access, installed status, platform, and store is edited below.
+        Add a game to the shared SquadSync library. Detailed editing happens on each game page.
     </p>
 
     <form class="inline" method="post" action="/games/add">
@@ -13,203 +13,46 @@
     </form>
 </div>
 
-<h2>Edit Library Info</h2>
+<h2>Library</h2>
 
 <form method="post" action="/games/fetch-missing-metadata" style="margin-bottom: 18px;">
-    <button type="submit">Fetch Missing Metadata</button>
+    <button type="submit">Refresh Missing Metadata</button>
 </form>
 
+<div class="game-library-grid">
 {% for row in rows %}
-<div class="card">
-{% if row.game.background_image %}
-<img src="{{ row.game.background_image }}"
-     alt="{{ row.game.title }} cover art"
-     style="max-width: 220px; border-radius: 12px; margin-bottom: 12px;">
-{% endif %}
-
-<h3>{{ row.game.title }}</h3>
-
-<div class="action-row">
-    <a href="/games/{{ row.game.id }}" class="button-link">Edit Details</a>
-    <form method="post" action="/games/{{ row.game.id }}/fetch-metadata">
-        <button type="submit">Fetch Metadata</button>
-    </form>
-    <form method="post" action="/games/{{ row.game.id }}/archive">
-        <button type="submit" onclick="return confirm('Archive {{ row.game.title }}?');">
-            Archive
-        </button>
-    </form>
-</div>
-
- <p class="small">
-{% if row.game.released %}
-<p class="small">
-    Released: {{ row.game.released }}
-</p>
-{% endif %}
-
-{% if row.game.genres %}
-<p class="small">
-    Genres: {{ row.game.genres }}
-</p>
-{% endif %}
-
-{% if row.game.platforms %}
-<p class="small">
-    Platforms: {{ row.game.platforms }}
-</p>
-{% endif %}
-{% if row.game.metadata_synced_at %}
-<p class="small">
-    Metadata synced: {{ row.game.metadata_synced_at }}
-</p>
-{% endif %}
-
-        PC/Xbox Crossplay: {{ row.game.pc_xbox_crossplay or row.game.crossplay }} |
-        <form class="inline" method="post" action="/game-crossplay/update" style="margin-bottom: 16px;">
-    <input type="hidden" name="game_id" value="{{ row.game.id }}">
-
-    <select name="pc_xbox_crossplay">
-        {% for option in crossplay_options %}
-            <option value="{{ option }}" {% if (row.game.pc_xbox_crossplay or row.game.crossplay) == option %}selected{% endif %}>
-                PC/Xbox: {{ option }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <input name="crossplay_notes"
-           value="{{ row.game.crossplay_notes }}"
-           placeholder="Crossplay notes">
-
-    <button type="submit">Save Crossplay</button>
-</form>
-        Players: {{ row.game.min_players }}-{{ row.game.max_players }} |
-        Tags: {{ row.game.tags }}
-        {% if row.game.crossplay_notes %}
-            <br>Crossplay Notes: {{ row.game.crossplay_notes }}
+    <div class="card game-library-card">
+        {% if row.game.background_image %}
+            <img src="{{ row.game.background_image }}"
+                 alt="{{ row.game.title }} cover art"
+                 class="game-library-image">
         {% endif %}
-    </p>
-<form class="inline" method="post" action="/game-squad/update" style="margin-bottom: 16px;">
-    <input type="hidden" name="game_id" value="{{ row.game.id }}">
 
-    <input name="squad_min"
-           type="number"
-           min="1"
-           value="{{ row.game.squad_min or 1 }}"
-           style="width: 80px;">
+        <div class="game-library-info">
+            <h3>{{ row.game.title }}</h3>
 
-    <input name="squad_max"
-           type="number"
-           min="1"
-           value="{{ row.game.squad_max or 4 }}"
-           style="width: 80px;">
+                <p class="small">
+                    Platforms: {{ row.game.platforms }}
+                    <br>
 
-    <label>
-        <input type="checkbox"
-               name="squad_verified"
-               value="1"
-               {% if row.game.squad_verified %}checked{% endif %}>
-        Verified
-    </label>
+                    Crossplay:
+                    {{ row.game.pc_xbox_crossplay or row.game.crossplay }}
 
-    <input name="squad_source"
-           value="{{ row.game.squad_source }}"
-           placeholder="Source">
+                    <br>
 
-    <input name="squad_notes"
-           value="{{ row.game.squad_notes }}"
-           placeholder="Squad notes">
+                    {% if row.game.squad_verified %}
+                        Squad: {{ row.game.squad_min }}-{{ row.game.squad_max }} verified
+                    {% else %}
+                        Squad: {{ row.game.squad_min }}-{{ row.game.squad_max }} unverified
+                    {% endif %}
+                </p>
 
-    <button type="submit">Save Squad Size</button>
-</form>
-
-<table>
-    <tr>
-        <th>Player</th>
-        <th>Access</th>
-        <th>Installed</th>
-        <th>Mode</th>
-        <th>Comp Ready</th>
-        <th>Platform</th>
-        <th>Store</th>
-        <th>Notes</th>
-        <th>Save</th>
-    </tr>
-
-    {% for player in players %}
-    <tr>
-        <form method="post" action="/player-game/update">
-            <input type="hidden" name="player_id" value="{{ player.id }}">
-            <input type="hidden" name="game_id" value="{{ row.game.id }}">
-
-            <td>{{ player.name }}</td>
-
-            <td>
-                <select name="access">
-                    {% for option in access_options %}
-                        <option value="{{ option }}" {% if row.player_data[player.id].access == option %}selected{% endif %}>
-                            {{ option }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </td>
-
-            <td>
-                <select name="installed">
-                    {% for option in installed_options %}
-                        <option value="{{ option }}" {% if row.player_data[player.id].installed == option %}selected{% endif %}>
-                            {{ option }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </td>
-
-            <td>
-                <select name="preferred_mode">
-                    {% for option in mode_options %}
-                        <option value="{{ option }}" {% if row.player_data[player.id].preferred_mode == option %}selected{% endif %}>
-                            {{ option }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </td>
-
-            <td>
-                <select name="competitive_ready">
-                    {% for option in competitive_ready_options %}
-                        <option value="{{ option }}" {% if row.player_data[player.id].competitive_ready == option %}selected{% endif %}>
-                            {{ option }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </td>
-
-            <td>
-                <input name="platform"
-                       value="{{ row.player_data[player.id].platform }}"
-                       placeholder="PC, Xbox, Steam Deck">
-            </td>
-
-            <td>
-                <input name="store"
-                       value="{{ row.player_data[player.id].store }}"
-                       placeholder="Steam, Xbox, Epic">
-            </td>
-
-            <td>
-                <input name="notes"
-                       value="{{ row.player_data[player.id].notes }}"
-                       placeholder="Optional">
-            </td>
-
-            <td>
-                <button>Save</button>
-            </td>
-        </form>
-    </tr>
-    {% endfor %}
-</table>
-</div>
+            <div class="action-row">
+                <a href="/games/{{ row.game.id }}" class="button-link">Open Details</a>
+            </div>
+        </div>
+    </div>
 {% endfor %}
+</div>
 
 {% endblock %}
