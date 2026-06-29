@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+
+<p>
+    <a href="/games">← Back to Games</a>
+</p>
+
+<div class="card">
+    {% if row.game.background_image %}
+        <img src="{{ row.game.background_image }}"
+             alt="{{ row.game.title }} cover art"
+             style="max-width: 260px; border-radius: 12px; margin-bottom: 12px;">
+    {% endif %}
+
+    <h2>{{ row.game.title }}</h2>
+
+    {% if row.game.released %}
+        <p class="small">Released: {{ row.game.released }}</p>
+    {% endif %}
+
+    {% if row.game.genres %}
+        <p class="small">Genres: {{ row.game.genres }}</p>
+    {% endif %}
+
+    {% if row.game.platforms %}
+        <p class="small">Platforms: {{ row.game.platforms }}</p>
+    {% endif %}
+
+    <p class="small">
+        PC/Xbox: {{ row.game.pc_xbox_crossplay or row.game.crossplay }} |
+        Squad:
+        {% if row.game.squad_verified %}
+            {{ row.game.squad_min }}-{{ row.game.squad_max }} verified
+        {% else %}
+            {{ row.game.min_players }}-{{ row.game.max_players }} unverified
+        {% endif %}
+    </p>
+</div>
+
+<div class="card">
+    <h2>Player Details</h2>
+
+    <table>
+        <tr>
+            <th>Player</th>
+            <th>Access</th>
+            <th>Installed</th>
+            <th>Mode</th>
+            <th>Comp Ready</th>
+            <th>Platform</th>
+            <th>Store</th>
+            <th>Notes</th>
+            <th>Save</th>
+        </tr>
+
+        {% for player in players %}
+        <tr>
+            <form method="post" action="/player-game/update">
+                <input type="hidden" name="player_id" value="{{ player.id }}">
+                <input type="hidden" name="game_id" value="{{ row.game.id }}">
+
+                <td>{{ player.name }}</td>
+
+                <td>
+                    <select name="access">
+                        {% for option in access_options %}
+                            <option value="{{ option }}" {% if row.player_data[player.id].access == option %}selected{% endif %}>
+                                {{ option }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </td>
+
+                <td>
+                    <select name="installed">
+                        {% for option in installed_options %}
+                            <option value="{{ option }}" {% if row.player_data[player.id].installed == option %}selected{% endif %}>
+                                {{ option }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </td>
+
+                <td>
+                    <select name="preferred_mode">
+                        {% for option in mode_options %}
+                            <option value="{{ option }}" {% if row.player_data[player.id].preferred_mode == option %}selected{% endif %}>
+                                {{ option }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </td>
+
+                <td>
+                    <select name="competitive_ready">
+                        {% for option in competitive_ready_options %}
+                            <option value="{{ option }}" {% if row.player_data[player.id].competitive_ready == option %}selected{% endif %}>
+                                {{ option }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </td>
+
+                <td>
+                    <input name="platform"
+                           value="{{ row.player_data[player.id].platform }}"
+                           placeholder="PC, Xbox, Steam Deck">
+                </td>
+
+                <td>
+                    <input name="store"
+                           value="{{ row.player_data[player.id].store }}"
+                           placeholder="Steam, Xbox, Epic">
+                </td>
+
+                <td>
+                    <input name="notes"
+                           value="{{ row.player_data[player.id].notes }}"
+                           placeholder="Optional">
+                </td>
+
+                <td>
+                    <button>Save</button>
+                </td>
+            </form>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+{% endblock %}

@@ -53,6 +53,8 @@ h2 {
 }
 h3 {
     color: var(--yellow);
+    font-size: 1.7rem;
+    margin-bottom: 10px;
 }
 
 nav {
@@ -114,6 +116,44 @@ button {
 
 button:hover { 
     background: var(--pink);
+    transform: translateY(-1px);
+}
+
+button,
+a.button-link {
+    font-family: inherit;
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+
+.action-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.action-row form {
+    display: inline-flex;
+    margin: 0;
+}
+
+a.button-link {
+    display: inline-block;
+    padding: 8px 12px;
+    background: var(--purple);
+    color: #191a21 !important;
+    border-radius: 8px;
+    text-decoration: none !important;
+    font-weight: 700;
+    margin-right: 0;
+    vertical-align: middle;
+}
+
+a.button-link:hover {
+    background: var(--pink);
+    color: #191a21 !important;
     transform: translateY(-1px);
 }
 

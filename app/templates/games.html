@@ -26,24 +26,22 @@
      alt="{{ row.game.title }} cover art"
      style="max-width: 220px; border-radius: 12px; margin-bottom: 12px;">
 {% endif %}
-    <h3>
-    {{ row.game.title }}
 
-    <form method="post"
-          action="/games/{{ row.game.id }}/fetch-metadata"
-          style="display:inline;">
+<h3>{{ row.game.title }}</h3>
+
+<div class="action-row">
+    <a href="/games/{{ row.game.id }}" class="button-link">Edit Details</a>
+    <form method="post" action="/games/{{ row.game.id }}/fetch-metadata">
         <button type="submit">Fetch Metadata</button>
     </form>
-    <form method="post"
-      action="/games/{{ row.game.id }}/archive"
-      style="display:inline;">
-    <button type="submit"
-            onclick="return confirm('Archive {{ row.game.title }}?');">
-        Archive
-    </button>
-</form>
-</h3>
-    <p class="small">
+    <form method="post" action="/games/{{ row.game.id }}/archive">
+        <button type="submit" onclick="return confirm('Archive {{ row.game.title }}?');">
+            Archive
+        </button>
+    </form>
+</div>
+
+ <p class="small">
 {% if row.game.released %}
 <p class="small">
     Released: {{ row.game.released }}

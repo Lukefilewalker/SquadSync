@@ -413,6 +413,34 @@ def games(request: Request):
             },
         )
 
+@app.get("/games/{game_id}")
+def game_detail(request: Request, game_id: int):
+    with db() as conn:
+        players, rows = get_matrix(conn)
+
+        selected_row = None
+        for row in rows:
+            if row["game"]["id"] == game_id:
+                selected_row = row
+                break
+
+        if not selected_row:
+            return RedirectResponse("/games", status_code=303)
+
+        return templates.TemplateResponse(
+            "game_detail.html",
+            {
+                "request": request,
+                "players": players,
+                "row": selected_row,
+                "access_options": ACCESS_OPTIONS,
+                "installed_options": INSTALLED_OPTIONS,
+                "crossplay_options": CROSSPLAY_OPTIONS,
+                "mode_options": MODE_OPTIONS,
+                "competitive_ready_options": COMPETITIVE_READY_OPTIONS,
+            },
+        )
+
 @app.get("/matrix")
 def matrix(request: Request):
     with db() as conn:
