@@ -44,7 +44,7 @@ Each player-game record has:
 
 The dashboard shows:
 
-- Ready tonight
+- Ready now
 - One download away
 - Everyone has access
 - Needs purchase

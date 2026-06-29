@@ -57,21 +57,21 @@
         </div>
 
         <div>
-            <label class="small">Playing Tonight</label><br>
+            <label class="small">Current Squad</label><br>
 
             {% if player.active_tonight %}
-                <span class="status-installed">Active tonight</span><br><br>
+                <span class="status-installed">In Current Squad</span><br><br>
                 <form method="post" action="/players/set-active">
                     <input type="hidden" name="player_id" value="{{ player.id }}">
                     <input type="hidden" name="active_tonight" value="0">
-                    <button type="submit">Set Inactive</button>
+                    <button type="submit">Remove from Squad</button>
                 </form>
             {% else %}
-                <span class="status-not-owned">Inactive tonight</span><br><br>
+                <span class="status-not-owned">Not in Current Squad</span><br><br>
                 <form method="post" action="/players/set-active">
                     <input type="hidden" name="player_id" value="{{ player.id }}">
                     <input type="hidden" name="active_tonight" value="1">
-                    <button type="submit">Set Active</button>
+                    <button type="submit">Add to Squad</button>
                 </form>
             {% endif %}
         </div>

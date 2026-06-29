@@ -167,7 +167,7 @@ def classify_game(player_values, game):
     if pc_xbox == "Unknown":
         return "Mixed"
     if installed_count == total and access_count == total and pc_xbox in {"Yes", "Partial"}:
-        return "Ready tonight"
+        return "Ready Now"
 
     if access_count == total and installed_count < total:
         return "Install needed"
@@ -273,7 +273,7 @@ def dashboard(request: Request):
         players = [p for p in players if p["active_tonight"]]
 
         buckets = {
-            "Ready tonight": [],
+            "Ready Now": [],
             "Install needed": [],
             "Everyone has access": [],
             "Blocked by platform": [],
