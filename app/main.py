@@ -24,7 +24,7 @@ templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 ACCESS_OPTIONS = ["Own", "Game Pass", "Free-to-play", "Shared Library", "No Access", "Unknown"]
 INSTALLED_OPTIONS = ["Yes", "No", "Unknown"]
 CROSSPLAY_OPTIONS = ["Yes", "No", "Partial", "Possible", "Unknown"]
-MODE_OPTIONS = ["Unknown", "Casual", "Competitive", "Either", "Co-op", "Custom"]
+MODE_OPTIONS = ["Unknown", "Casual", "Competitive", "Both"]
 COMPETITIVE_READY_OPTIONS = ["Unknown", "Yes", "No"]
 ACCESS_OK = {"Own", "Game Pass", "Free-to-play", "Shared Library"}
 
@@ -497,6 +497,8 @@ def update_player_game(
     game_id: int = Form(...),
     access: str = Form("Unknown"),
     installed: str = Form("Unknown"),
+    preferred_mode: str = Form("Unknown"),
+    competitive_ready: str = Form("Unknown"),
     platform: str = Form(""),
     store: str = Form(""),
     notes: str = Form(""),
@@ -506,6 +508,12 @@ def update_player_game(
 
     if installed not in INSTALLED_OPTIONS:
         installed = "Unknown"
+
+    if preferred_mode not in MODE_OPTIONS:
+        preferred_mode = "Unknown"
+
+    if competitive_ready not in COMPETITIVE_READY_OPTIONS:
+        competitive_ready = "Unknown"
 
     legacy_status = "Unknown"
     if installed == "Yes":
@@ -522,14 +530,17 @@ def update_player_game(
             """
             INSERT INTO player_games(
                 player_id, game_id, status, access, installed,
+                preferred_mode, competitive_ready,
                 platform, store, notes, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(player_id, game_id)
             DO UPDATE SET
                 status = excluded.status,
                 access = excluded.access,
                 installed = excluded.installed,
+                preferred_mode = excluded.preferred_mode,
+                competitive_ready = excluded.competitive_ready,
                 platform = excluded.platform,
                 store = excluded.store,
                 notes = excluded.notes,
@@ -541,6 +552,8 @@ def update_player_game(
                 legacy_status,
                 access,
                 installed,
+                preferred_mode,
+                competitive_ready,
                 platform.strip(),
                 store.strip(),
                 notes.strip(),

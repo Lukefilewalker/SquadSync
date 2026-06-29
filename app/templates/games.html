@@ -124,48 +124,93 @@
 
     <button type="submit">Save Squad Size</button>
 </form>
-    <table>
-        <tr>
-            <th>Player</th>
-            <th>Access</th>
-            <th>Installed</th>
-            <th>Platform</th>
-            <th>Store</th>
-            <th>Notes</th>
-            <th>Save</th>
-        </tr>
-        {% for player in players %}
-        <tr>
-            <form method="post" action="/player-game/update">
-                <input type="hidden" name="player_id" value="{{ player.id }}">
-                <input type="hidden" name="game_id" value="{{ row.game.id }}">
 
-                <td>{{ player.name }}</td>
+<table>
+    <tr>
+        <th>Player</th>
+        <th>Access</th>
+        <th>Installed</th>
+        <th>Mode</th>
+        <th>Comp Ready</th>
+        <th>Platform</th>
+        <th>Store</th>
+        <th>Notes</th>
+        <th>Save</th>
+    </tr>
 
-                <td>
-                    <select name="access">
-                        {% for option in access_options %}
-                            <option value="{{ option }}" {% if row.player_data[player.id].access == option %}selected{% endif %}>{{ option }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
+    {% for player in players %}
+    <tr>
+        <form method="post" action="/player-game/update">
+            <input type="hidden" name="player_id" value="{{ player.id }}">
+            <input type="hidden" name="game_id" value="{{ row.game.id }}">
 
-                <td>
-                    <select name="installed">
-                        {% for option in installed_options %}
-                            <option value="{{ option }}" {% if row.player_data[player.id].installed == option %}selected{% endif %}>{{ option }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
+            <td>{{ player.name }}</td>
 
-                <td><input name="platform" value="{{ row.player_data[player.id].platform }}" placeholder="PC, Xbox, Steam Deck"></td>
-                <td><input name="store" value="{{ row.player_data[player.id].store }}" placeholder="Steam, Xbox, Epic"></td>
-                <td><input name="notes" value="{{ row.player_data[player.id].notes }}" placeholder="Optional"></td>
-                <td><button>Save</button></td>
-            </form>
-        </tr>
-        {% endfor %}
-    </table>
+            <td>
+                <select name="access">
+                    {% for option in access_options %}
+                        <option value="{{ option }}" {% if row.player_data[player.id].access == option %}selected{% endif %}>
+                            {{ option }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </td>
+
+            <td>
+                <select name="installed">
+                    {% for option in installed_options %}
+                        <option value="{{ option }}" {% if row.player_data[player.id].installed == option %}selected{% endif %}>
+                            {{ option }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </td>
+
+            <td>
+                <select name="preferred_mode">
+                    {% for option in mode_options %}
+                        <option value="{{ option }}" {% if row.player_data[player.id].preferred_mode == option %}selected{% endif %}>
+                            {{ option }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </td>
+
+            <td>
+                <select name="competitive_ready">
+                    {% for option in competitive_ready_options %}
+                        <option value="{{ option }}" {% if row.player_data[player.id].competitive_ready == option %}selected{% endif %}>
+                            {{ option }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </td>
+
+            <td>
+                <input name="platform"
+                       value="{{ row.player_data[player.id].platform }}"
+                       placeholder="PC, Xbox, Steam Deck">
+            </td>
+
+            <td>
+                <input name="store"
+                       value="{{ row.player_data[player.id].store }}"
+                       placeholder="Steam, Xbox, Epic">
+            </td>
+
+            <td>
+                <input name="notes"
+                       value="{{ row.player_data[player.id].notes }}"
+                       placeholder="Optional">
+            </td>
+
+            <td>
+                <button>Save</button>
+            </td>
+        </form>
+    </tr>
+    {% endfor %}
+</table>
 </div>
 {% endfor %}
 
