@@ -1,79 +1,114 @@
 # SquadSync
+SquadSync is a self-hosted multiplayer gaming companion that helps groups of friends decide what to play together.
 
-A self-hosted multiplayer game library tracker that helps groups of friends find games they can play together across platforms.
+It tracks game ownership, installation status, platforms, crossplay support, squad sizes, player preferences, and competitive readiness to recommend games that work for the current squad.
 
-## Quick start with Docker
+Built with:
+- FastAPI
+- SQLite
+- Docker
+- RAWG API
+- Cloudflare Tunnel (optional)
 
+## Features
+### Dashboard
+- Active squad tracking
+- Recommended games
+- Ready-to-play analysis
+- Access and install status summaries
+
+### Game Library
+- Search games
+- RAWG metadata integration
+- Cover art and platform data
+- Crossplay tracking
+- Squad size tracking
+- Game detail pages
+
+### Player Profiles
+- Display names
+- Real names
+- Xbox gamertags
+- Discord usernames
+- Twitch usernames
+- Steam usernames
+- Avatar URLs
+- Preferred voice platform
+- Player notes
+
+### Matrix View
+View ownership and install status for every player and every game.
+
+## Quick Start
 ```bash
-cd game-night-finder
 docker compose up --build -d
 ```
 
-Then open:
-
+Open:
 ```text
-http://<your-pi-ip>:8099
+http://<your-server>:8099
 ```
 
 Example:
-
 ```text
-http://192.168.50.60:8099
+http://192.168.50.241:8099
 ```
 
-## First login / usage
-
-There is no login yet. This is the first private LAN version.
-
-Preloaded players:
-
-- Steven
-- Nick
-- Anthony
-- Ray
-- Derek
-- Kenny
-
-## What it tracks
-
-Each player-game record has:
-
-- status: Installed, Owned, Game Pass, Not Owned, Unknown
-- platform: PC, Xbox, Steam Deck, Handheld, etc.
-- notes
-
-The dashboard shows:
-
-- Ready now
-- One download away
-- Everyone has access
-- Needs purchase
-- Unknown
-
-## Useful commands
-
-Start:
-
+## Development
+Start VS Code Remote SSH:
 ```bash
-docker compose up --build -d
+code .
 ```
 
-Stop:
-
+Build and restart:
 ```bash
-docker compose down
+docker compose up -d --build
 ```
 
 View logs:
-
 ```bash
 docker compose logs -f
 ```
 
-Reset database:
+Check status:
+```bash
+docker compose ps
+```
 
+## Database
+SQLite database:
+```text
+data/gamenight.db
+```
+
+The database stores:
+- Players
+- Games
+- Player-game relationships
+- Crossplay metadata
+- Squad size metadata
+- Profile information
+
+## Roadmap
+### Near Term
+- Clickable player profile links
+- Better recommendation explanations
+- Dashboard statistics
+- Platform compatibility improvements
+
+### Future
+- Discord integration
+- Automatic online status detection
+- Session planning
+- Player avatars and uploads
+- Steam/Xbox profile integration
+- Availability tracking
+
+## Reset Database
 ```bash
 docker compose down
 rm -f data/gamenight.db
-docker compose up --build -d
+docker compose up -d --build
 ```
+
+Warning: this removes all players, games, and profile data.
