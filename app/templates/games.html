@@ -91,7 +91,39 @@
             <br>Crossplay Notes: {{ row.game.crossplay_notes }}
         {% endif %}
     </p>
+<form class="inline" method="post" action="/game-squad/update" style="margin-bottom: 16px;">
+    <input type="hidden" name="game_id" value="{{ row.game.id }}">
 
+    <input name="squad_min"
+           type="number"
+           min="1"
+           value="{{ row.game.squad_min or 1 }}"
+           style="width: 80px;">
+
+    <input name="squad_max"
+           type="number"
+           min="1"
+           value="{{ row.game.squad_max or 4 }}"
+           style="width: 80px;">
+
+    <label>
+        <input type="checkbox"
+               name="squad_verified"
+               value="1"
+               {% if row.game.squad_verified %}checked{% endif %}>
+        Verified
+    </label>
+
+    <input name="squad_source"
+           value="{{ row.game.squad_source }}"
+           placeholder="Source">
+
+    <input name="squad_notes"
+           value="{{ row.game.squad_notes }}"
+           placeholder="Squad notes">
+
+    <button type="submit">Save Squad Size</button>
+</form>
     <table>
         <tr>
             <th>Player</th>

@@ -79,6 +79,11 @@ def init_db():
         add_column_if_missing(conn, "games", "pc_xbox_crossplay", "TEXT DEFAULT 'Unknown'")
         add_column_if_missing(conn, "games", "crossplay_notes", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "games", "archived", "INTEGER DEFAULT 0")
+        add_column_if_missing(conn, "games", "squad_min", "INTEGER DEFAULT 1")
+        add_column_if_missing(conn, "games", "squad_max", "INTEGER DEFAULT 4")
+        add_column_if_missing(conn, "games", "squad_verified", "INTEGER DEFAULT 0")
+        add_column_if_missing(conn, "games", "squad_source", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "squad_notes", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "players", "xbox_gamertag", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "players", "discord_username", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "players", "twitch_username", "TEXT DEFAULT ''")
@@ -204,8 +209,14 @@ def get_recommendations(players, rows):
             if pdata["access"] == "Unknown" or pdata["installed"] == "Unknown":
                 unknown_count += 1
 
-        min_players = game["min_players"] or 1
-        max_players = game["max_players"] or 99
+        if game["squad_verified"]:
+            min_players = game["squad_min"] or 1
+            max_players = game["squad_max"] or 99
+            squad_label = f"Squad: {min_players}-{max_players} verified"
+        else:
+            min_players = game["min_players"] or 1
+            max_players = game["max_players"] or 99
+            squad_label = f"Players: {min_players}-{max_players} unverified"
 
         score = (ready_count * 8) + (installed_count * 4) + (access_count * 2)
 
@@ -241,6 +252,7 @@ def get_recommendations(players, rows):
             "min_players": min_players,
             "max_players": max_players,
             "squad_fit": squad_fit,
+            "squad_label": squad_label,
             "pc_xbox_crossplay": pc_xbox,
         })
 
@@ -342,6 +354,7 @@ def add_game(
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
+                    clean_title,
                     pc_xbox_crossplay,
                     pc_xbox_crossplay,
                     min_players,
@@ -423,6 +436,47 @@ def update_game_crossplay(
             WHERE id = ?
             """,
             (pc_xbox_crossplay, crossplay_notes.strip(), game_id),
+        )
+        conn.commit()
+
+    return RedirectResponse("/games", status_code=303)
+
+@app.post("/game-squad/update")
+def update_game_squad(
+    game_id: int = Form(...),
+    squad_min: int = Form(1),
+    squad_max: int = Form(4),
+    squad_verified: int = Form(0),
+    squad_source: str = Form(""),
+    squad_notes: str = Form(""),
+):
+    if squad_min < 1:
+        squad_min = 1
+
+    if squad_max < squad_min:
+        squad_max = squad_min
+
+    squad_verified = 1 if squad_verified else 0
+
+    with db() as conn:
+        conn.execute(
+            """
+            UPDATE games
+            SET squad_min = ?,
+                squad_max = ?,
+                squad_verified = ?,
+                squad_source = ?,
+                squad_notes = ?
+            WHERE id = ?
+            """,
+            (
+                squad_min,
+                squad_max,
+                squad_verified,
+                squad_source.strip(),
+                squad_notes.strip(),
+                game_id,
+            ),
         )
         conn.commit()
 

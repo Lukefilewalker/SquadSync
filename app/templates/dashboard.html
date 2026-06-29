@@ -6,6 +6,7 @@
 <p class="small">
     Best options are ranked by access, install status, and PC/Xbox compatibility.
 </p>
+
 <div class="card">
     <h2>Current Active Squadmates</h2>
 
@@ -19,6 +20,7 @@
     {% endfor %}
     </ul>
 </div>
+
 <div class="card">
     <h2>Best Options Tonight</h2>
 
@@ -32,7 +34,7 @@
                     Ready: {{ item.ready_count }}/{{ item.total_players }} |
                     Access: {{ item.access_count }}/{{ item.total_players }} |
                     Installed: {{ item.installed_count }}/{{ item.total_players }} |
-                    Players: {{ item.min_players }}-{{ item.max_players }} |
+                    {{ item.squad_label }} |
                     Fit: {{ item.squad_fit }} |
                     PC/Xbox: {{ item.pc_xbox_crossplay }}
                 </div>
@@ -51,16 +53,28 @@
 
         {% if items %}
             <ul>
-            {% for row in items %}
+            {% for row in items[:10] %}
                 <li>
                     <strong>{{ row.game.title }}</strong>
                     <div class="small">
                         PC/Xbox: {{ row.game.pc_xbox_crossplay or row.game.crossplay }} |
-                        Players: {{ row.game.min_players }}-{{ row.game.max_players }}
+
+                        {% if row.game.squad_verified %}
+                            Squad: {{ row.game.squad_min }}-{{ row.game.squad_max }} verified
+                        {% else %}
+                            Players: {{ row.game.min_players }}-{{ row.game.max_players }} unverified
+                        {% endif %}
                     </div>
                 </li>
             {% endfor %}
             </ul>
+
+            {% if items|length > 10 %}
+                <p class="small">
+                    Showing 10 of {{ items|length }}. See Matrix for the full list.
+                </p>
+            {% endif %}
+
         {% else %}
             <p class="small">Nothing here yet.</p>
         {% endif %}
