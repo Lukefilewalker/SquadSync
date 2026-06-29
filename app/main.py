@@ -726,7 +726,6 @@ def update_player(
     discord_username: str = Form(""),
     twitch_username: str = Form(""),
     preferred_voice: str = Form("Either"),
-    active_tonight: int = Form(0),
     notes: str = Form(""),
 ):
     if preferred_voice not in VOICE_OPTIONS:
@@ -741,7 +740,6 @@ def update_player(
                 discord_username = ?,
                 twitch_username = ?,
                 preferred_voice = ?,
-                active_tonight = ?,
                 notes = ?
             WHERE id = ?
             """,
@@ -751,7 +749,6 @@ def update_player(
                 discord_username.strip(),
                 twitch_username.strip(),
                 preferred_voice,
-                active_tonight,
                 notes.strip(),
                 player_id,
             ),
