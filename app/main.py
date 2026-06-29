@@ -86,6 +86,7 @@ def init_db():
         add_column_if_missing(conn, "games", "squad_verified", "INTEGER DEFAULT 0")
         add_column_if_missing(conn, "games", "squad_source", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "games", "squad_notes", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "players", "display_name", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "players", "xbox_gamertag", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "players", "discord_username", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "players", "twitch_username", "TEXT DEFAULT ''")
@@ -381,7 +382,7 @@ def dashboard(request: Request):
             buckets[bucket].append(row)
 
         recommendations = get_recommendations(players, rows)
-        active_player_names = [p["name"] for p in players]
+        active_player_names = [p["display_name"] or p["name"] for p in players]
 
         return templates.TemplateResponse(
             "dashboard.html",
@@ -845,6 +846,7 @@ VOICE_OPTIONS = ["Discord", "Xbox Party", "In-game", "Either", "Unknown"]
 def update_player(
     player_id: int = Form(...),
     name: str = Form(...),
+    display_name: str = Form(""),
     xbox_gamertag: str = Form(""),
     discord_username: str = Form(""),
     twitch_username: str = Form(""),
@@ -859,6 +861,7 @@ def update_player(
             """
             UPDATE players
             SET name = ?,
+                display_name = ?,
                 xbox_gamertag = ?,
                 discord_username = ?,
                 twitch_username = ?,
@@ -868,6 +871,7 @@ def update_player(
             """,
             (
                 name.strip(),
+                display_name.strip(),
                 xbox_gamertag.strip(),
                 discord_username.strip(),
                 twitch_username.strip(),
