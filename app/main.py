@@ -196,6 +196,13 @@ def get_recommendations(players, rows):
         no_access_count = 0
         unknown_count = 0
 
+        casual_count = 0
+        competitive_count = 0
+        both_count = 0
+        mode_unknown_count = 0
+        comp_ready_count = 0
+        comp_not_ready_count = 0
+
         for player in players:
             pdata = player_data[player["id"]]
 
@@ -216,6 +223,22 @@ def get_recommendations(players, rows):
 
             if pdata["access"] == "Unknown" or pdata["installed"] == "Unknown":
                 unknown_count += 1
+
+            preferred_mode = pdata.get("preferred_mode", "Unknown")
+            if preferred_mode == "Casual":
+                casual_count += 1
+            elif preferred_mode == "Competitive":
+                competitive_count += 1
+            elif preferred_mode == "Both":
+                both_count += 1
+            else:
+                mode_unknown_count += 1
+
+            competitive_ready = pdata.get("competitive_ready", "Unknown")
+            if competitive_ready == "Yes":
+                comp_ready_count += 1
+            elif competitive_ready == "No":
+                comp_not_ready_count += 1
 
         if game["squad_verified"]:
             min_players = game["squad_min"] or 1
@@ -248,6 +271,28 @@ def get_recommendations(players, rows):
             score -= 12
             squad_fit = "Too many ready players"
 
+        mode_fit = "Unknown"
+        if competitive_count > 0 and casual_count == 0:
+            mode_fit = "Competitive fit"
+            score += 3
+        elif casual_count > 0 and competitive_count == 0:
+            mode_fit = "Casual fit"
+            score += 2
+        elif both_count > 0 and casual_count == 0 and competitive_count == 0:
+            mode_fit = "Flexible"
+            score += 1
+        elif casual_count > 0 and competitive_count > 0:
+            mode_fit = "Mixed preferences"
+            score -= 2
+
+        if competitive_count > 0:
+            if comp_not_ready_count > 0:
+                score -= 3
+                mode_fit = f"{mode_fit}, some not comp ready"
+            elif comp_ready_count >= competitive_count:
+                score += 2
+                mode_fit = f"{mode_fit}, comp ready"
+
         recommendations.append({
             "game": game,
             "score": score,
@@ -262,6 +307,13 @@ def get_recommendations(players, rows):
             "squad_fit": squad_fit,
             "squad_label": squad_label,
             "pc_xbox_crossplay": pc_xbox,
+            "casual_count": casual_count,
+            "competitive_count": competitive_count,
+            "both_count": both_count,
+            "mode_unknown_count": mode_unknown_count,
+            "comp_ready_count": comp_ready_count,
+            "comp_not_ready_count": comp_not_ready_count,
+            "mode_fit": mode_fit,
         })
 
     return sorted(recommendations, key=lambda item: item["score"], reverse=True)
