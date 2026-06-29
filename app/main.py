@@ -624,6 +624,7 @@ def update_player_game(
     platform: str = Form(""),
     store: str = Form(""),
     notes: str = Form(""),
+    next_url: str = Form("/games"),
 ):
     if access not in ACCESS_OPTIONS:
         access = "Unknown"
@@ -683,7 +684,7 @@ def update_player_game(
         )
         conn.commit()
 
-    return RedirectResponse("/games", status_code=303)
+    return RedirectResponse(next_url, status_code=303)
 
 def fetch_rawg_metadata(title: str):
     api_key = os.getenv("RAWG_API_KEY")
