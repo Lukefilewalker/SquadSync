@@ -90,6 +90,8 @@ def init_db():
         add_column_if_missing(conn, "players", "xbox_gamertag", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "players", "discord_username", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "players", "twitch_username", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "players", "avatar_url", "TEXT")
+        add_column_if_missing(conn, "players", "steam_username", "TEXT")
         add_column_if_missing(conn, "players", "preferred_voice", "TEXT DEFAULT 'Either'")
         add_column_if_missing(conn, "players", "notes", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "players", "active_tonight", "INTEGER DEFAULT 1")
@@ -831,6 +833,46 @@ def players(request: Request):
             },
         )
 
+@app.get("/players/{player_id}")
+def player_detail(request: Request, player_id: int):
+    with db() as conn:
+        player = conn.execute(
+            "SELECT * FROM players WHERE id = ?",
+            (player_id,),
+        ).fetchone()
+
+        if not player:
+            return RedirectResponse("/players", status_code=303)
+
+        games = conn.execute(
+            """
+            SELECT
+                g.*,
+                pg.access,
+                pg.installed,
+                pg.preferred_mode,
+                pg.competitive_ready,
+                pg.platform,
+                pg.store,
+                pg.notes AS player_game_notes
+            FROM games g
+            LEFT JOIN player_games pg
+                ON pg.game_id = g.id
+               AND pg.player_id = ?
+            WHERE COALESCE(g.archived, 0) = 0
+            ORDER BY g.title
+            """,
+            (player_id,),
+        ).fetchall()
+
+        return templates.TemplateResponse(
+            "player_detail.html",
+            {
+                "request": request,
+                "player": player,
+                "games": games,
+            },
+        )
 
 @app.post("/players/add")
 def add_player(name: str = Form(...)):
@@ -850,8 +892,11 @@ def update_player(
     xbox_gamertag: str = Form(""),
     discord_username: str = Form(""),
     twitch_username: str = Form(""),
+    steam_username: str = Form(""),
+    avatar_url: str = Form(""),
     preferred_voice: str = Form("Either"),
     notes: str = Form(""),
+    next_url: str = Form("/players"),
 ):
     if preferred_voice not in VOICE_OPTIONS:
         preferred_voice = "Either"
@@ -865,6 +910,8 @@ def update_player(
                 xbox_gamertag = ?,
                 discord_username = ?,
                 twitch_username = ?,
+                steam_username = ?,
+                avatar_url = ?,
                 preferred_voice = ?,
                 notes = ?
             WHERE id = ?
@@ -875,6 +922,8 @@ def update_player(
                 xbox_gamertag.strip(),
                 discord_username.strip(),
                 twitch_username.strip(),
+                steam_username.strip(),
+                avatar_url.strip(),
                 preferred_voice,
                 notes.strip(),
                 player_id,
@@ -882,7 +931,7 @@ def update_player(
         )
         conn.commit()
 
-    return RedirectResponse("/players", status_code=303)
+    return RedirectResponse(next_url, status_code=303)
 
 @app.post("/players/set-active")
 def set_player_active(
