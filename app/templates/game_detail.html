@@ -2,54 +2,116 @@
 {% block content %}
 
 <p>
-    <a href="/games">← Back to Games</a>
+    <a href="/games">← Back to Library</a>
 </p>
 
 <div class="card">
-    {% if row.game.background_image %}
-        <img src="{{ row.game.background_image }}"
-             alt="{{ row.game.title }} cover art"
-             style="max-width: 260px; border-radius: 12px; margin-bottom: 12px;">
-    {% endif %}
+    <div class="game-library-card">
+        {% if row.game.background_image %}
+            <img src="{{ row.game.background_image }}"
+                 alt="{{ row.game.title }} cover art"
+                 class="game-library-image">
+        {% endif %}
 
-    <h2>{{ row.game.title }}</h2>
+        <div class="game-library-info">
+            <h2>{{ row.game.title }}</h2>
 
-<div class="action-row">
-    <form method="post"
-          action="/games/{{ row.game.id }}/fetch-metadata">
-        <button type="submit">Refresh Metadata</button>
-    </form>
+            <div class="action-row">
+                <form method="post" action="/games/{{ row.game.id }}/fetch-metadata">
+                    <button type="submit">Refresh Metadata</button>
+                </form>
 
-    <form method="post"
-          action="/games/{{ row.game.id }}/archive">
-        <button type="submit"
-                onclick="return confirm('Archive {{ row.game.title }}?');">
-            Archive
-        </button>
+                <form method="post" action="/games/{{ row.game.id }}/archive">
+                    <button type="submit"
+                            onclick="return confirm('Archive {{ row.game.title }}?');">
+                        Archive
+                    </button>
+                </form>
+            </div>
+
+            <p class="small">
+                {% if row.game.released %}
+                    Released: {{ row.game.released }}<br>
+                {% endif %}
+
+                {% if row.game.genres %}
+                    Genres: {{ row.game.genres }}<br>
+                {% endif %}
+
+                {% if row.game.platforms %}
+                    Platforms: {{ row.game.platforms }}<br>
+                {% endif %}
+
+                PC/Xbox: {{ row.game.pc_xbox_crossplay or row.game.crossplay }}<br>
+
+                {% if row.game.squad_verified %}
+                    Squad: {{ row.game.squad_min }}-{{ row.game.squad_max }} verified
+                {% else %}
+                    Squad: {{ row.game.min_players }}-{{ row.game.max_players }} unverified
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Crossplay</h2>
+
+    <form class="inline" method="post" action="/game-crossplay/update">
+        <input type="hidden" name="game_id" value="{{ row.game.id }}">
+
+        <select name="pc_xbox_crossplay">
+            {% for option in crossplay_options %}
+                <option value="{{ option }}" {% if (row.game.pc_xbox_crossplay or row.game.crossplay) == option %}selected{% endif %}>
+                    PC/Xbox: {{ option }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <input name="crossplay_notes"
+               value="{{ row.game.crossplay_notes }}"
+               placeholder="Crossplay notes">
+
+        <button type="submit">Save Crossplay</button>
     </form>
 </div>
 
-    {% if row.game.released %}
-        <p class="small">Released: {{ row.game.released }}</p>
-    {% endif %}
+<div class="card">
+    <h2>Squad Size</h2>
 
-    {% if row.game.genres %}
-        <p class="small">Genres: {{ row.game.genres }}</p>
-    {% endif %}
+    <form class="inline" method="post" action="/game-squad/update">
+        <input type="hidden" name="game_id" value="{{ row.game.id }}">
 
-    {% if row.game.platforms %}
-        <p class="small">Platforms: {{ row.game.platforms }}</p>
-    {% endif %}
+        <input name="squad_min"
+               type="number"
+               min="1"
+               value="{{ row.game.squad_min or 1 }}"
+               style="width: 80px;">
 
-    <p class="small">
-        PC/Xbox: {{ row.game.pc_xbox_crossplay or row.game.crossplay }} |
-        Squad:
-        {% if row.game.squad_verified %}
-            {{ row.game.squad_min }}-{{ row.game.squad_max }} verified
-        {% else %}
-            {{ row.game.min_players }}-{{ row.game.max_players }} unverified
-        {% endif %}
-    </p>
+        <input name="squad_max"
+               type="number"
+               min="1"
+               value="{{ row.game.squad_max or 4 }}"
+               style="width: 80px;">
+
+        <label>
+            <input type="checkbox"
+                   name="squad_verified"
+                   value="1"
+                   {% if row.game.squad_verified %}checked{% endif %}>
+            Verified
+        </label>
+
+        <input name="squad_source"
+               value="{{ row.game.squad_source }}"
+               placeholder="Source">
+
+        <input name="squad_notes"
+               value="{{ row.game.squad_notes }}"
+               placeholder="Squad notes">
+
+        <button type="submit">Save Squad Size</button>
+    </form>
 </div>
 
 <div class="card">
