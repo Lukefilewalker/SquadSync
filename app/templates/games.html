@@ -15,13 +15,22 @@
 
 <h2>Library</h2>
 
+<div class="card" style="margin-bottom:16px;">
+    <input
+        id="gameSearch"
+        type="text"
+        placeholder="Search games..."
+        style="width:100%; max-width:400px;">
+</div>
+
 <form method="post" action="/games/fetch-missing-metadata" style="margin-bottom: 18px;">
     <button type="submit">Refresh Missing Metadata</button>
 </form>
 
 <div class="game-library-grid">
 {% for row in rows %}
-    <div class="card game-library-card">
+<div class="card game-library-card searchable-game"
+     data-title="{{ row.game.title|lower }}">
         {% if row.game.background_image %}
             <img src="{{ row.game.background_image }}"
                  alt="{{ row.game.title }} cover art"
@@ -54,5 +63,25 @@
     </div>
 {% endfor %}
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const searchBox = document.getElementById("gameSearch");
+
+    searchBox.addEventListener("input", () => {
+        const term = searchBox.value.toLowerCase();
+
+        document.querySelectorAll(".searchable-game")
+            .forEach(card => {
+                const title = card.dataset.title;
+
+                card.style.display =
+                    title.includes(term)
+                        ? ""
+                        : "none";
+            });
+    });
+});
+</script>
 
 {% endblock %}
