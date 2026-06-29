@@ -24,6 +24,8 @@ templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 ACCESS_OPTIONS = ["Own", "Game Pass", "Free-to-play", "Shared Library", "No Access", "Unknown"]
 INSTALLED_OPTIONS = ["Yes", "No", "Unknown"]
 CROSSPLAY_OPTIONS = ["Yes", "No", "Partial", "Possible", "Unknown"]
+MODE_OPTIONS = ["Unknown", "Casual", "Competitive", "Either", "Co-op", "Custom"]
+COMPETITIVE_READY_OPTIONS = ["Unknown", "Yes", "No"]
 ACCESS_OK = {"Own", "Game Pass", "Free-to-play", "Shared Library"}
 
 
@@ -90,7 +92,10 @@ def init_db():
         add_column_if_missing(conn, "players", "preferred_voice", "TEXT DEFAULT 'Either'")
         add_column_if_missing(conn, "players", "notes", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "players", "active_tonight", "INTEGER DEFAULT 1")
-
+        add_column_if_missing(conn, "player_games", "preferred_mode", "TEXT DEFAULT 'Unknown'")
+        add_column_if_missing(conn, "player_games", "competitive_ready", "TEXT DEFAULT 'Unknown'")
+        add_column_if_missing(conn, "player_games", "mode_notes", "TEXT DEFAULT ''")
+        
         conn.commit()
 
 
@@ -121,7 +126,8 @@ def get_matrix(conn):
         for player in players:
             pg = conn.execute(
                 """
-                SELECT access, installed, platform, store, notes
+                SELECT access, installed, platform, store, notes,
+                       preferred_mode, competitive_ready, mode_notes
                 FROM player_games
                 WHERE player_id = ? AND game_id = ?
                 """,
@@ -134,12 +140,14 @@ def get_matrix(conn):
                 "platform": "",
                 "store": "",
                 "notes": "",
+                "preferred_mode": "Unknown",
+                "competitive_ready": "Unknown",
+                "mode_notes": "",
             }
 
         rows.append({"game": game, "player_data": player_data})
 
     return players, rows
-
 
 def classify_game(player_values, game):
     total = len(player_values)
@@ -293,7 +301,6 @@ def dashboard(request: Request):
             },
         )
 
-
 @app.get("/games")
 def games(request: Request):
     with db() as conn:
@@ -307,6 +314,8 @@ def games(request: Request):
                 "access_options": ACCESS_OPTIONS,
                 "installed_options": INSTALLED_OPTIONS,
                 "crossplay_options": CROSSPLAY_OPTIONS,
+                "mode_options": MODE_OPTIONS,
+                "competitive_ready_options": COMPETITIVE_READY_OPTIONS,
             },
         )
 
@@ -729,8 +738,8 @@ def update_player(
                 discord_username.strip(),
                 twitch_username.strip(),
                 preferred_voice,
-                notes.strip(),
                 active_tonight,
+                notes.strip(),
                 player_id,
             ),
         )
