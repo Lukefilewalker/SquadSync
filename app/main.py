@@ -1,3 +1,15 @@
+"""
+SquadSync main application.
+
+This file contains the FastAPI routes, SQLite setup, RAWG metadata integration,
+recommendation scoring, and player/game update handlers.
+
+Maintenance note:
+- RAWG data is imported metadata and may be stale.
+- SquadSync verified fields are local overrides based on what the group has tested.
+- The SQLite schema is migrated in-place with add_column_if_missing().
+"""
+
 from pathlib import Path
 import os
 import sqlite3
@@ -9,6 +21,10 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+
+# ============================================================
+# Application paths and database location
+# ============================================================
 APP_DIR = Path(__file__).parent
 DATA_DIR = Path("/app/data")
 if not DATA_DIR.exists():
@@ -17,10 +33,18 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH = DATA_DIR / "gamenight.db"
 
+
+# ============================================================
+# FastAPI application and template/static setup
+# ============================================================
 app = FastAPI(title="SquadSync")
 app.mount("/static", StaticFiles(directory=str(APP_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 
+
+# ============================================================
+# Shared option lists used by forms and validation
+# ============================================================
 ACCESS_OPTIONS = ["Own", "Game Pass", "Free-to-play", "Shared Library", "No Access", "Unknown"]
 INSTALLED_OPTIONS = ["Yes", "No", "Unknown"]
 CROSSPLAY_OPTIONS = ["Yes", "No", "Partial", "Possible", "Unknown"]
@@ -29,18 +53,29 @@ COMPETITIVE_READY_OPTIONS = ["Unknown", "Yes", "No"]
 ACCESS_OK = {"Own", "Game Pass", "Free-to-play", "Shared Library"}
 
 
+
+# ============================================================
+# Database helpers
+# ============================================================
+# Open a SQLite connection and return rows that behave like dictionaries.
 def db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
+# Add a column only if it does not already exist. This keeps old databases compatible.
 def add_column_if_missing(conn, table, column, definition):
     cols = [row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()]
     if column not in cols:
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
+
+# ============================================================
+# Database initialization and lightweight migrations
+# ============================================================
+# Create the base schema and apply any missing-column migrations.
 def init_db():
     with db() as conn:
         conn.executescript(
@@ -117,6 +152,11 @@ def init_db():
         
         conn.commit()
 
+
+# ============================================================
+# Display helpers passed into Jinja templates
+# ============================================================
+# Convert comma-separated metadata into human-friendly display text.
 def format_list(value):
     if not value:
         return ""
@@ -127,6 +167,7 @@ def format_list(value):
         if item.strip()
     )
 
+# Show SquadSync verified platforms first, and RAWG platforms as the fallback.
 def display_platforms(game):
     # Prefer SquadSync verified platforms when present.
     # Fall back to RAWG platforms when we do not have a local override.
@@ -137,16 +178,27 @@ def display_platforms(game):
 
     return game["platforms"] or ""
 
+
+# ============================================================
+# Application startup
+# ============================================================
 @app.on_event("startup")
+# Ensure the database exists and migrations are applied when the app starts.
 def startup():
     init_db()
 
+
+# ============================================================
+# Core data loading helpers
+# ============================================================
+# Load players with active squad members listed first.
 def get_players(conn):
     return conn.execute("""
         SELECT * FROM players
         ORDER BY active_tonight DESC, name
     """).fetchall() 
 
+# Load non-archived games for the active library.
 def get_games(conn):
     return conn.execute("""
         SELECT * FROM games
@@ -154,6 +206,7 @@ def get_games(conn):
         ORDER BY title
     """).fetchall()
 
+# Build the game/player matrix used by the dashboard, game list, and detail pages.
 def get_matrix(conn):
     players = get_players(conn)
     games = get_games(conn)
@@ -187,6 +240,11 @@ def get_matrix(conn):
 
     return players, rows
 
+
+# ============================================================
+# Dashboard recommendation and classification logic
+# ============================================================
+# Place a game into a dashboard bucket based on current squad readiness.
 def classify_game(player_values, game):
     total = len(player_values)
 
@@ -221,6 +279,7 @@ def classify_game(player_values, game):
 
     return "Mixed"
 
+# Score games for the active squad using access, install status, crossplay, squad size, and mode preferences.
 def get_recommendations(players, rows):
     recommendations = []
 
@@ -398,7 +457,12 @@ def get_recommendations(players, rows):
 
     return sorted(recommendations, key=lambda item: item["score"], reverse=True)
 
+
+# ============================================================
+# Page routes
+# ============================================================
 @app.get("/")
+# Dashboard home page with current squad and ranked recommendations.
 def dashboard(request: Request):
     with db() as conn:
         players, rows = get_matrix(conn)
@@ -435,6 +499,7 @@ def dashboard(request: Request):
         )
 
 @app.get("/games")
+# Game library page.
 def games(request: Request):
     with db() as conn:
         players, rows = get_matrix(conn)
@@ -455,6 +520,7 @@ def games(request: Request):
         )
 
 @app.get("/games/{game_id}")
+# Detailed page for one game, including metadata and per-player status.
 def game_detail(request: Request, game_id: int):
     with db() as conn:
         players, rows = get_matrix(conn)
@@ -485,6 +551,7 @@ def game_detail(request: Request, game_id: int):
         )
 
 @app.get("/matrix")
+# Full matrix view of games by player.
 def matrix(request: Request):
     with db() as conn:
         players, rows = get_matrix(conn)
@@ -499,7 +566,12 @@ def matrix(request: Request):
             },
         )
 
+
+# ============================================================
+# Game create/update/archive routes
+# ============================================================
 @app.post("/games/add")
+# Add a new game and attempt to pull RAWG metadata immediately.
 def add_game(
     title: str = Form(...),
     pc_xbox_crossplay: str = Form("Unknown"),
@@ -579,6 +651,7 @@ def add_game(
     return RedirectResponse("/games", status_code=303)
 
 @app.post("/games/{game_id}/archive")
+# Hide a game from the active library without deleting it.
 def archive_game(game_id: int):
     with db() as conn:
         conn.execute(
@@ -590,6 +663,7 @@ def archive_game(game_id: int):
     return RedirectResponse("/games", status_code=303)
 
 @app.post("/games/{game_id}/unarchive")
+# Restore an archived game to the active library.
 def unarchive_game(game_id: int):
     with db() as conn:
         conn.execute(
@@ -601,6 +675,7 @@ def unarchive_game(game_id: int):
     return RedirectResponse("/games", status_code=303)
 
 @app.post("/game-crossplay/update")
+# Save locally verified PC/Xbox crossplay information.
 def update_game_crossplay(
     game_id: int = Form(...),
     pc_xbox_crossplay: str = Form("Unknown"),
@@ -630,6 +705,7 @@ def update_game_crossplay(
     return RedirectResponse(f"/games/{game_id}", status_code=303)
 
 @app.post("/game-platforms/update")
+# Save locally verified platform support when RAWG is stale or incomplete.
 def update_game_platforms(
     game_id: int = Form(...),
     platforms_verified: str = Form(""),
@@ -661,6 +737,7 @@ def update_game_platforms(
     return RedirectResponse(f"/games/{game_id}", status_code=303)
 
 @app.post("/game-squad/update")
+# Save locally verified squad size information.
 def update_game_squad(
     game_id: int = Form(...),
     squad_min: int = Form(1),
@@ -703,7 +780,12 @@ def update_game_squad(
 
     return RedirectResponse(f"/games/{game_id}", status_code=303)
 
+
+# ============================================================
+# Per-player game library update route
+# ============================================================
 @app.post("/player-game/update")
+# Save one player's access/install/platform status for one game.
 def update_player_game(
     player_id: int = Form(...),
     game_id: int = Form(...),
@@ -776,6 +858,11 @@ def update_player_game(
 
     return RedirectResponse(next_url, status_code=303)
 
+
+# ============================================================
+# RAWG metadata integration
+# ============================================================
+# Query RAWG for imported game metadata.
 def fetch_rawg_metadata(title: str):
     api_key = os.getenv("RAWG_API_KEY")
     if not api_key:
@@ -867,6 +954,7 @@ def fetch_rawg_metadata(title: str):
 
 
 @app.post("/games/{game_id}/fetch-metadata")
+# Refresh RAWG metadata for a single game.
 def fetch_game_metadata(game_id: int):
     with db() as conn:
         game = conn.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
@@ -915,6 +1003,7 @@ def fetch_game_metadata(game_id: int):
     return RedirectResponse(f"/games/{game_id}", status_code=303)
 
 @app.post("/games/fetch-missing-metadata")
+# Refresh RAWG metadata for games that do not have it yet.
 def fetch_missing_metadata():
     # Find games that do not have RAWG metadata yet.
     with db() as conn:
@@ -971,7 +1060,12 @@ def fetch_missing_metadata():
 
     return RedirectResponse("/games", status_code=303)
 
+
+# ============================================================
+# Player routes
+# ============================================================
 @app.get("/players")
+# Player roster page.
 def players(request: Request):
     with db() as conn:
         people = get_players(conn)
@@ -986,6 +1080,7 @@ def players(request: Request):
         )
 
 @app.get("/players/{player_id}")
+# Detailed profile page for one player.
 def player_detail(request: Request, player_id: int):
     with db() as conn:
         player = conn.execute(
@@ -1029,6 +1124,7 @@ def player_detail(request: Request, player_id: int):
         )
 
 @app.post("/players/add")
+# Add a new player by real name.
 def add_player(name: str = Form(...)):
     with db() as conn:
         conn.execute("INSERT OR IGNORE INTO players(name) VALUES (?)", (name.strip(),))
@@ -1039,6 +1135,7 @@ def add_player(name: str = Form(...)):
 VOICE_OPTIONS = ["Discord", "Xbox Party", "In-game", "Either", "Unknown"]
 
 @app.post("/players/update")
+# Save player profile, contact, avatar, and notes fields.
 def update_player(
     player_id: int = Form(...),
     name: str = Form(...),
@@ -1093,6 +1190,7 @@ def update_player(
     return RedirectResponse(next_url, status_code=303)
 
 @app.post("/players/set-active")
+# Add or remove a player from the current squad.
 def set_player_active(
     player_id: int = Form(...),
     active_tonight: int = Form(...),
