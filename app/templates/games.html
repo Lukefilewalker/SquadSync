@@ -1,20 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
 
+<!-- ==========================================================
+     Add Game Section
+=========================================================== -->
 <div class="card">
     <h2>Add Game</h2>
+
     <p class="small">
-        Add a game to the shared SquadSync library. Detailed editing happens on each game page.
+        Add a game to the shared SquadSync library.
+        Detailed editing happens on each game page.
     </p>
 
     <form class="inline" method="post" action="/games/add">
-        <input name="title" placeholder="Game title" required>
+        <input
+            name="title"
+            placeholder="Game title"
+            required>
+
         <button>Add</button>
     </form>
 </div>
 
+<!-- ==========================================================
+     Library Header
+=========================================================== -->
 <h2>Library</h2>
 
+<!-- ==========================================================
+     Search Box
+=========================================================== -->
 <div class="card" style="margin-bottom:16px;">
     <input
         id="gameSearch"
@@ -23,57 +38,121 @@
         style="width:100%; max-width:400px;">
 </div>
 
-<form method="post" action="/games/fetch-missing-metadata" style="margin-bottom: 18px;">
-    <button type="submit">Refresh Missing Metadata</button>
+<!-- ==========================================================
+     Metadata Refresh Button
+=========================================================== -->
+<form method="post"
+      action="/games/fetch-missing-metadata"
+      style="margin-bottom:18px;">
+
+    <button type="submit">
+        Refresh Missing Metadata
+    </button>
 </form>
 
+<!-- ==========================================================
+     Game Library Grid
+=========================================================== -->
 <div class="game-library-grid">
+
 {% for row in rows %}
-<div class="card game-library-card searchable-game"
-     data-title="{{ row.game.title|lower }}">
-        {% if row.game.background_image %}
-            <img src="{{ row.game.background_image }}"
-                 alt="{{ row.game.title }} cover art"
-                 class="game-library-image">
-        {% endif %}
+<div
+    class="card game-library-card searchable-game"
+    data-title="{{ row.game.title|lower }}">
 
-        <div class="game-library-info">
-            <h3>{{ row.game.title }}</h3>
+    <!-- ------------------------------------------------------
+         Cover Art
+    ------------------------------------------------------- -->
+    {% if row.game.background_image %}
+        <img
+            src="{{ row.game.background_image }}"
+            alt="{{ row.game.title }} cover art"
+            class="game-library-image">
+    {% endif %}
 
-                <p class="small">
-                    Platforms: {{ row.game.platforms }}
-                    <br>
+    <!-- ------------------------------------------------------
+         Game Information
+    ------------------------------------------------------- -->
+    <div class="game-library-info">
 
-                    Crossplay:
-                    {{ row.game.pc_xbox_crossplay or row.game.crossplay }}
+        <h3>{{ row.game.title }}</h3>
 
-                    <br>
+        <p class="small">
 
-                    {% if row.game.squad_verified %}
-                        Squad: {{ row.game.squad_min }}-{{ row.game.squad_max }} verified
-                    {% else %}
-                        Squad: {{ row.game.squad_min }}-{{ row.game.squad_max }} unverified
-                    {% endif %}
-                </p>
+            {% if row.game.genres %}
+                Genres: {{ format_list(row.game.genres) }}
+                <br>
+            {% endif %}
 
-            <div class="action-row">
-                <a href="/games/{{ row.game.id }}" class="button-link">Open Details</a>
-            </div>
+            {% if row.game.platforms %}
+                Platforms: {{ format_list(row.game.platforms) }}
+                <br>
+            {% endif %}
+
+            {% if row.game.developers %}
+               Developers: {{ format_list(row.game.developers) }}
+                <br>
+            {% endif %}
+
+            {% if row.game.stores %}
+                Stores: {{ format_list(row.game.stores) }}
+                <br>
+            {% endif %}
+
+            Crossplay:
+            {{ row.game.pc_xbox_crossplay or row.game.crossplay }}
+
+            <br>
+
+            {% if row.game.squad_verified %}
+                Squad:
+                {{ row.game.squad_min }}-{{ row.game.squad_max }}
+                verified
+            {% else %}
+                Squad:
+                {{ row.game.squad_min }}-{{ row.game.squad_max }}
+                unverified
+            {% endif %}
+
+        </p>
+
+        <!-- --------------------------------------------------
+             Actions
+        --------------------------------------------------- -->
+        <div class="action-row">
+            <a
+                href="/games/{{ row.game.id }}"
+                class="button-link">
+                Open Details
+            </a>
         </div>
+
     </div>
+</div>
 {% endfor %}
+
 </div>
 
+<!-- ==========================================================
+     Client-Side Search
+=========================================================== -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    const searchBox = document.getElementById("gameSearch");
+
+    const searchBox =
+        document.getElementById("gameSearch");
 
     searchBox.addEventListener("input", () => {
-        const term = searchBox.value.toLowerCase();
 
-        document.querySelectorAll(".searchable-game")
+        const term =
+            searchBox.value.toLowerCase();
+
+        document
+            .querySelectorAll(".searchable-game")
             .forEach(card => {
-                const title = card.dataset.title;
+
+                const title =
+                    card.dataset.title;
 
                 card.style.display =
                     title.includes(term)

@@ -35,11 +35,31 @@
                 {% endif %}
 
                 {% if row.game.genres %}
-                    Genres: {{ row.game.genres }}<br>
+                    Genres: {{ format_list(row.game.genres) }}<br>
                 {% endif %}
 
                 {% if row.game.platforms %}
-                    Platforms: {{ row.game.platforms }}<br>
+                    Platforms: {{ format_list(row.game.platforms) }}<br>
+                {% endif %}
+
+                {% if row.game.developers %}
+                    Developers: {{ format_list(row.game.developers) }}<br>
+                {% endif %}
+
+                {% if row.game.publishers %}
+                    Publishers: {{ format_list(row.game.publishers) }}<br>
+                {% endif %}
+
+                {% if row.game.stores %}
+                    Stores: {{ format_list(row.game.stores) }}<br>
+                {% endif %}
+
+                {% if row.game.esrb_rating %}
+                    ESRB: {{ row.game.esrb_rating }}<br>
+                {% endif %}
+
+                {% if row.game.rawg_tags %}
+                    RAWG Tags: {{ format_list(row.game.rawg_tags) }}<br>
                 {% endif %}
 
                 PC/Xbox: {{ row.game.pc_xbox_crossplay or row.game.crossplay }}<br>

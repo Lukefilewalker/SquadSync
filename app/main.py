@@ -80,6 +80,11 @@ def init_db():
         add_column_if_missing(conn, "player_games", "store", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "games", "pc_xbox_crossplay", "TEXT DEFAULT 'Unknown'")
         add_column_if_missing(conn, "games", "crossplay_notes", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "developers", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "publishers", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "stores", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "rawg_tags", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "esrb_rating", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "games", "archived", "INTEGER DEFAULT 0")
         add_column_if_missing(conn, "games", "squad_min", "INTEGER DEFAULT 1")
         add_column_if_missing(conn, "games", "squad_max", "INTEGER DEFAULT 4")
@@ -102,6 +107,15 @@ def init_db():
         
         conn.commit()
 
+def format_list(value):
+    if not value:
+        return ""
+
+    return ", ".join(
+        item.strip()
+        for item in value.split(",")
+        if item.strip()
+    )
 
 @app.on_event("startup")
 def startup():
@@ -396,6 +410,7 @@ def dashboard(request: Request):
                 "rows": rows,
                 "buckets": buckets,
                 "recommendations": recommendations,
+                "format_list": format_list,
             },
         )
 
@@ -414,6 +429,7 @@ def games(request: Request):
                 "crossplay_options": CROSSPLAY_OPTIONS,
                 "mode_options": MODE_OPTIONS,
                 "competitive_ready_options": COMPETITIVE_READY_OPTIONS,
+                "format_list": format_list,
             },
         )
 
@@ -442,6 +458,7 @@ def game_detail(request: Request, game_id: int):
                 "crossplay_options": CROSSPLAY_OPTIONS,
                 "mode_options": MODE_OPTIONS,
                 "competitive_ready_options": COMPETITIVE_READY_OPTIONS,
+                "format_list": format_list,
             },
         )
 
@@ -456,6 +473,7 @@ def matrix(request: Request):
                 "request": request,
                 "players": players,
                 "rows": rows,
+                "format_list": format_list,
             },
         )
 
@@ -484,9 +502,11 @@ def add_game(
                     title, crossplay, pc_xbox_crossplay, min_players, max_players,
                     tags, notes, crossplay_notes,
                     rawg_id, released, genres, platforms,
+                    developers, publishers, stores,
+                    rawg_tags, esrb_rating,
                     background_image, description, metadata_synced_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     clean_title,
@@ -501,6 +521,11 @@ def add_game(
                     metadata["released"],
                     metadata["genres"],
                     metadata["platforms"],
+                    metadata["developers"],
+                    metadata["publishers"],
+                    metadata["stores"],
+                    metadata["rawg_tags"],
+                    metadata["esrb_rating"],
                     metadata["background_image"],
                     metadata["description"],
                     datetime.now().isoformat(timespec="seconds"),
@@ -718,14 +743,51 @@ def fetch_rawg_metadata(title: str):
     detail_response.raise_for_status()
     detail = detail_response.json()
 
-    genres = ",".join([g.get("name", "") for g in detail.get("genres", []) if g.get("name")])
-    platforms = ",".join([
+    genres = ",".join(
+        g.get("name", "")
+        for g in detail.get("genres", [])
+        if g.get("name")
+    )
+
+    platforms = ",".join(
         p.get("platform", {}).get("name", "")
         for p in detail.get("platforms", [])
         if p.get("platform", {}).get("name")
-    ])
+    )
 
-    description = detail.get("description_raw") or detail.get("description") or ""
+    developers = ",".join(
+        d.get("name", "")
+        for d in detail.get("developers", [])
+        if d.get("name")
+    )
+
+    publishers = ",".join(
+        p.get("name", "")
+        for p in detail.get("publishers", [])
+        if p.get("name")
+    )
+
+    stores = ",".join(
+        s.get("store", {}).get("name", "")
+        for s in detail.get("stores", [])
+        if s.get("store", {}).get("name")
+    )
+
+    rawg_tags = ",".join(
+        t.get("name", "")
+        for t in detail.get("tags", [])
+        if t.get("name")
+    )
+
+    esrb_rating = (
+        detail.get("esrb_rating", {}) or {}
+    ).get("name", "")
+
+    description = (
+        detail.get("description_raw")
+        or detail.get("description")
+        or ""
+    )
 
     return {
         "rawg_id": rawg_id,
@@ -733,6 +795,11 @@ def fetch_rawg_metadata(title: str):
         "released": detail.get("released") or "",
         "genres": genres,
         "platforms": platforms,
+        "developers": developers,
+        "publishers": publishers,
+        "stores": stores,
+        "rawg_tags": rawg_tags,
+        "esrb_rating": esrb_rating,
         "background_image": detail.get("background_image") or "",
         "description": description,
     }
@@ -756,6 +823,11 @@ def fetch_game_metadata(game_id: int):
                     released = ?,
                     genres = ?,
                     platforms = ?,
+                    developers = ?,
+                    publishers = ?,
+                    stores = ?,
+                    rawg_tags = ?,
+                    esrb_rating = ?,
                     background_image = ?,
                     description = ?,
                     metadata_synced_at = ?
@@ -766,6 +838,11 @@ def fetch_game_metadata(game_id: int):
                     metadata["released"],
                     metadata["genres"],
                     metadata["platforms"],
+                    metadata["developers"],
+                    metadata["publishers"],
+                    metadata["stores"],
+                    metadata["rawg_tags"],
+                    metadata["esrb_rating"],
                     metadata["background_image"],
                     metadata["description"],
                     datetime.now().isoformat(timespec="seconds"),
@@ -774,10 +851,11 @@ def fetch_game_metadata(game_id: int):
             )
             conn.commit()
 
-    return RedirectResponse("/games", status_code=303)
+    return RedirectResponse(f"/games/{game_id}", status_code=303)
 
 @app.post("/games/fetch-missing-metadata")
 def fetch_missing_metadata():
+    # Find games that do not have RAWG metadata yet.
     with db() as conn:
         games = conn.execute(
             """
@@ -789,6 +867,7 @@ def fetch_missing_metadata():
             """
         ).fetchall()
 
+        # Pull metadata from RAWG for each missing game.
         for game in games:
             metadata = fetch_rawg_metadata(game["title"])
 
@@ -800,6 +879,11 @@ def fetch_missing_metadata():
                         released = ?,
                         genres = ?,
                         platforms = ?,
+                        developers = ?,
+                        publishers = ?,
+                        stores = ?,
+                        rawg_tags = ?,
+                        esrb_rating = ?,
                         background_image = ?,
                         description = ?,
                         metadata_synced_at = ?
@@ -810,6 +894,11 @@ def fetch_missing_metadata():
                         metadata["released"],
                         metadata["genres"],
                         metadata["platforms"],
+                        metadata["developers"],
+                        metadata["publishers"],
+                        metadata["stores"],
+                        metadata["rawg_tags"],
+                        metadata["esrb_rating"],
                         metadata["background_image"],
                         metadata["description"],
                         datetime.now().isoformat(timespec="seconds"),
@@ -831,6 +920,7 @@ def players(request: Request):
                 "request": request,
                 "players": people,
                 "voice_options": VOICE_OPTIONS,
+                "format_list": format_list,
             },
         )
 
@@ -873,6 +963,7 @@ def player_detail(request: Request, player_id: int):
                 "request": request,
                 "player": player,
                 "games": games,
+                "format_list": format_list,
             },
         )
 
