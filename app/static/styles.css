@@ -178,6 +178,16 @@ a.button-link:hover {
     transform: translateY(-1px);
 }
 
+.brand-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.brand-link:hover h1,
+.brand-link:hover .tagline {
+    color: var(--cyan);
+}
+
 .card {
     background: #21222c;
     padding: 16px;
