@@ -84,8 +84,8 @@
                 <br>
             {% endif %}
 
-            {% if row.game.platforms %}
-                Platforms: {{ format_list(row.game.platforms) }}
+            {% if display_platforms(row.game) %}
+                Platforms: {{ format_list(display_platforms(row.game)) }}
                 <br>
             {% endif %}
 

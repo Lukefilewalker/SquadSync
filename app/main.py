@@ -85,6 +85,16 @@ def init_db():
         add_column_if_missing(conn, "games", "stores", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "games", "rawg_tags", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "games", "esrb_rating", "TEXT DEFAULT ''")
+        # SquadSync platform overrides.
+        # RAWG can be stale, so these fields let us record platforms
+        # that our group has personally verified.
+        add_column_if_missing(conn, "games", "platforms_verified", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "platforms_source", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "platforms_notes", "TEXT DEFAULT ''")
+        # Verification timestamps for SquadSync-maintained game facts.
+        add_column_if_missing(conn, "games", "platforms_verified_at", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "crossplay_verified_at", "TEXT DEFAULT ''")
+        add_column_if_missing(conn, "games", "squad_verified_at", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "games", "archived", "INTEGER DEFAULT 0")
         add_column_if_missing(conn, "games", "squad_min", "INTEGER DEFAULT 1")
         add_column_if_missing(conn, "games", "squad_max", "INTEGER DEFAULT 4")
@@ -116,6 +126,16 @@ def format_list(value):
         for item in value.split(",")
         if item.strip()
     )
+
+def display_platforms(game):
+    # Prefer SquadSync verified platforms when present.
+    # Fall back to RAWG platforms when we do not have a local override.
+    verified = game["platforms_verified"] if "platforms_verified" in game.keys() else ""
+
+    if verified:
+        return verified
+
+    return game["platforms"] or ""
 
 @app.on_event("startup")
 def startup():
@@ -430,6 +450,7 @@ def games(request: Request):
                 "mode_options": MODE_OPTIONS,
                 "competitive_ready_options": COMPETITIVE_READY_OPTIONS,
                 "format_list": format_list,
+                "display_platforms": display_platforms,
             },
         )
 
@@ -459,6 +480,7 @@ def game_detail(request: Request, game_id: int):
                 "mode_options": MODE_OPTIONS,
                 "competitive_ready_options": COMPETITIVE_READY_OPTIONS,
                 "format_list": format_list,
+                "display_platforms": display_platforms,
             },
         )
 
@@ -592,14 +614,51 @@ def update_game_crossplay(
             """
             UPDATE games
             SET pc_xbox_crossplay = ?,
-                crossplay_notes = ?
+                crossplay_notes = ?,
+                crossplay_verified_at = ?
             WHERE id = ?
             """,
-            (pc_xbox_crossplay, crossplay_notes.strip(), game_id),
+            (
+                pc_xbox_crossplay, 
+                crossplay_notes.strip(), 
+                datetime.now().isoformat(timespec="seconds"),
+                game_id
+            ),
         )
         conn.commit()
 
-    return RedirectResponse("/games", status_code=303)
+    return RedirectResponse(f"/games/{game_id}", status_code=303)
+
+@app.post("/game-platforms/update")
+def update_game_platforms(
+    game_id: int = Form(...),
+    platforms_verified: str = Form(""),
+    platforms_source: str = Form(""),
+    platforms_notes: str = Form(""),
+):
+    # Store verified platform data separately from RAWG metadata.
+    # This lets SquadSync correct stale third-party data without deleting it.
+    with db() as conn:
+        conn.execute(
+            """
+            UPDATE games
+            SET platforms_verified = ?,
+                platforms_source = ?,
+                platforms_notes = ?,
+                platforms_verified_at = ?
+            WHERE id = ?
+            """,
+            (
+                platforms_verified.strip(),
+                platforms_source.strip(),
+                platforms_notes.strip(),
+                datetime.now().isoformat(timespec="seconds"),
+                game_id,
+            ),
+        )
+        conn.commit()
+
+    return RedirectResponse(f"/games/{game_id}", status_code=303)
 
 @app.post("/game-squad/update")
 def update_game_squad(
@@ -626,7 +685,8 @@ def update_game_squad(
                 squad_max = ?,
                 squad_verified = ?,
                 squad_source = ?,
-                squad_notes = ?
+                squad_notes = ?,
+                squad_verified_at = ?
             WHERE id = ?
             """,
             (
@@ -635,12 +695,13 @@ def update_game_squad(
                 squad_verified,
                 squad_source.strip(),
                 squad_notes.strip(),
+                datetime.now().isoformat(timespec="seconds"),
                 game_id,
             ),
         )
         conn.commit()
 
-    return RedirectResponse("/games", status_code=303)
+    return RedirectResponse(f"/games/{game_id}", status_code=303)
 
 @app.post("/player-game/update")
 def update_player_game(

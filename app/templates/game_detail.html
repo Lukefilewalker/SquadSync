@@ -1,12 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 
+<!-- Back link to the main game library. -->
 <p>
     <a href="/games">← Back to Library</a>
 </p>
 
+<!-- Main game summary card. -->
 <div class="card">
     <div class="game-library-card">
+
         {% if row.game.background_image %}
             <img src="{{ row.game.background_image }}"
                  alt="{{ row.game.title }} cover art"
@@ -16,6 +19,7 @@
         <div class="game-library-info">
             <h2>{{ row.game.title }}</h2>
 
+            <!-- Metadata and archive actions. -->
             <div class="action-row">
                 <form method="post" action="/games/{{ row.game.id }}/fetch-metadata">
                     <button type="submit">Refresh Metadata</button>
@@ -29,6 +33,7 @@
                 </form>
             </div>
 
+            <!-- Read-only game metadata. RAWG data is imported, verified data is our override. -->
             <p class="small">
                 {% if row.game.released %}
                     Released: {{ row.game.released }}<br>
@@ -38,8 +43,12 @@
                     Genres: {{ format_list(row.game.genres) }}<br>
                 {% endif %}
 
-                {% if row.game.platforms %}
-                    Platforms: {{ format_list(row.game.platforms) }}<br>
+                {% if display_platforms(row.game) %}
+                    Platforms: {{ format_list(display_platforms(row.game)) }}<br>
+                {% endif %}
+
+                {% if row.game.platforms_verified %}
+                    RAWG Platforms: {{ format_list(row.game.platforms) }}<br>
                 {% endif %}
 
                 {% if row.game.developers %}
@@ -74,6 +83,52 @@
     </div>
 </div>
 
+<!-- Platform override section. This corrects stale RAWG platform metadata. -->
+<div class="card">
+    <h2>Verified Platforms</h2>
+
+    <p class="small">
+        RAWG Platforms:
+        {{ format_list(row.game.platforms) or "Unknown" }}
+    </p>
+    {% if row.game.platforms_verified_at %}
+    <p class="small">
+        Last verified:
+        {{ row.game.platforms_verified_at[:16].replace("T", " ") }}
+    </p>
+    {% endif %}
+    <form class="inline" method="post" action="/game-platforms/update">
+        <input type="hidden" name="game_id" value="{{ row.game.id }}">
+
+        <input name="platforms_verified"
+               value="{{ row.game.platforms_verified }}"
+               placeholder="PC, Xbox Series S/X, PlayStation 5">
+
+        <input name="platforms_source"
+               value="{{ row.game.platforms_source }}"
+               placeholder="Source">
+
+        <input name="platforms_notes"
+               value="{{ row.game.platforms_notes }}"
+               placeholder="Platform notes">
+
+        <button type="submit">Save Platforms</button>
+    </form>
+
+    {% if row.game.platforms_source or row.game.platforms_notes %}
+        <p class="small">
+            {% if row.game.platforms_source %}
+                Source: {{ row.game.platforms_source }}<br>
+            {% endif %}
+
+            {% if row.game.platforms_notes %}
+                Notes: {{ row.game.platforms_notes }}
+            {% endif %}
+        </p>
+    {% endif %}
+</div>
+
+<!-- Crossplay override section. -->
 <div class="card">
     <h2>Crossplay</h2>
 
@@ -94,8 +149,15 @@
 
         <button type="submit">Save Crossplay</button>
     </form>
+    {% if row.game.crossplay_verified_at %}
+    <p class="small">
+        Last verified:
+        {{ row.game.crossplay_verified_at[:16].replace("T", " ") }}
+    </p>
+{% endif %}
 </div>
 
+<!-- Squad size override section. -->
 <div class="card">
     <h2>Squad Size</h2>
 
@@ -132,8 +194,15 @@
 
         <button type="submit">Save Squad Size</button>
     </form>
+    {% if row.game.squad_verified_at %}
+    <p class="small">
+        Last verified:
+        {{ row.game.squad_verified_at[:16].replace("T", " ") }}
+    </p>
+{% endif %}
 </div>
 
+<!-- Per-player game ownership and readiness table. -->
 <div class="card">
     <h2>Player Details</h2>
 
