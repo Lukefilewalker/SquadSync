@@ -25,6 +25,17 @@
     <p class="small">
         Preferred Voice: {{ player.preferred_voice }}
     </p>
+    {% if player.notes %}
+    <p class="small">
+        Notes:<br>
+        {{ player.notes | replace('\n', '<br>') | safe }}
+    </p>
+{% endif %}
+{% if player.updated_at %}
+    <p class="small">
+       Last updated: {{ player.updated_at[:16].replace("T", " ") }}
+    </p>
+{% endif %}
 </div>
 
 <div class="card">
@@ -126,9 +137,9 @@
                        placeholder="/static/avatars/example.png"><br><br>
 
                 <label class="small">Notes</label><br>
-                <input name="notes"
-                       value="{{ player.notes }}"
-                       placeholder="Optional notes"><br><br>
+                <textarea name="notes"
+                    placeholder="Optional notes"
+                    rows="5">{{ player.notes }}</textarea><br><br>
 
                 <button type="submit">Save Profile</button>
             </div>
@@ -148,6 +159,7 @@
             <th>Comp Ready</th>
             <th>Platform</th>
             <th>Store</th>
+            <th>Updated</th>
         </tr>
 
         {% for game in games %}
@@ -159,6 +171,11 @@
             <td>{{ game.competitive_ready or "Unknown" }}</td>
             <td>{{ game.platform or "" }}</td>
             <td>{{ game.store or "" }}</td>
+            <td>
+                {% if game.player_game_updated_at %}
+                    {{ game.player_game_updated_at[:16].replace("T", " ") }}
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </table>

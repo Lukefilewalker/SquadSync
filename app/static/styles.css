@@ -108,12 +108,21 @@ th {
 }
 
 input,
-select {
+select,
+textarea {
     padding: 8px;
     border-radius: 8px;
     border: 1px solid var(--comment);
     background: #21222c;
     color: var(--foreground);
+}
+
+textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    font-family: inherit;
+    box-sizing: border-box;
 }
 
 button {
@@ -312,6 +321,17 @@ form.inline {
     button {
         max-width: 100%;
     }
+
+textarea {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--comment);
+    background: #21222c;
+    color: var(--foreground);
+    width: 100%;
+    max-width: 420px;
+    font-family: inherit;
+}
 
     .game-library-card {
         grid-template-columns: 160px 1fr;

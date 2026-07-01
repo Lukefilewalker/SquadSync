@@ -95,6 +95,7 @@ def init_db():
         add_column_if_missing(conn, "players", "preferred_voice", "TEXT DEFAULT 'Either'")
         add_column_if_missing(conn, "players", "notes", "TEXT DEFAULT ''")
         add_column_if_missing(conn, "players", "active_tonight", "INTEGER DEFAULT 1")
+        add_column_if_missing(conn, "players", "updated_at", "TEXT")
         add_column_if_missing(conn, "player_games", "preferred_mode", "TEXT DEFAULT 'Unknown'")
         add_column_if_missing(conn, "player_games", "competitive_ready", "TEXT DEFAULT 'Unknown'")
         add_column_if_missing(conn, "player_games", "mode_notes", "TEXT DEFAULT ''")
@@ -854,11 +855,12 @@ def player_detail(request: Request, player_id: int):
                 pg.competitive_ready,
                 pg.platform,
                 pg.store,
-                pg.notes AS player_game_notes
+                pg.notes AS player_game_notes,
+                pg.updated_at AS player_game_updated_at
             FROM games g
             LEFT JOIN player_games pg
                 ON pg.game_id = g.id
-               AND pg.player_id = ?
+            AND pg.player_id = ?
             WHERE COALESCE(g.archived, 0) = 0
             ORDER BY g.title
             """,
@@ -898,9 +900,11 @@ def update_player(
     notes: str = Form(""),
     next_url: str = Form("/players"),
 ):
+    # Keep preferred voice limited to the values SquadSync understands.
     if preferred_voice not in VOICE_OPTIONS:
         preferred_voice = "Either"
 
+    # Update the player's profile and stamp when it was last changed.
     with db() as conn:
         conn.execute(
             """
@@ -913,7 +917,8 @@ def update_player(
                 steam_username = ?,
                 avatar_url = ?,
                 preferred_voice = ?,
-                notes = ?
+                notes = ?,
+                updated_at = ?
             WHERE id = ?
             """,
             (
@@ -926,11 +931,13 @@ def update_player(
                 avatar_url.strip(),
                 preferred_voice,
                 notes.strip(),
+                datetime.now().isoformat(timespec="seconds"),
                 player_id,
             ),
         )
         conn.commit()
 
+    # Return to the page the form came from, usually /players/{id}.
     return RedirectResponse(next_url, status_code=303)
 
 @app.post("/players/set-active")
