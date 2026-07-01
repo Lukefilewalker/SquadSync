@@ -14,11 +14,15 @@
 <div class="game-library-grid">
 {% for player in players %}
     <div class="card game-library-card">
-        {% if player.avatar_url %}
-            <img src="{{ player.avatar_url }}"
-                 alt="{{ player.display_name or player.name }} avatar"
-                 class="game-library-image">
-        {% endif %}
+        {% if player.avatar_url and player.avatar_url != "None" %}
+    <img src="{{ player.avatar_url }}"
+         alt="{{ player.display_name or player.name }} avatar"
+         class="player-avatar">
+{% else %}
+    <div class="player-avatar player-avatar-fallback">
+        {{ (player.display_name or player.name)[:1] }}
+    </div>
+{% endif %}
 
         <div class="game-library-info">
             <h3>{{ player.display_name or player.name }}</h3>
