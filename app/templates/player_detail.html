@@ -6,30 +6,38 @@
 </p>
 
 <div class="card">
-
     {% if player.avatar_url and player.avatar_url != "None" %}
-    <img src="{{ player.avatar_url }}"
-         alt="{{ player.display_name or player.name }} avatar"
-         class="player-avatar">
-{% else %}
-    <div class="player-avatar player-avatar-fallback">
-        {{ (player.display_name or player.name)[:1] }}
-    </div>
-{% endif %}
+        <img src="{{ player.avatar_url }}"
+             alt="{{ player.display_name or player.name }} avatar"
+             class="player-avatar">
+    {% else %}
+        <div class="player-avatar player-avatar-fallback">
+            {{ (player.display_name or player.name)[:1] }}
+        </div>
+    {% endif %}
 
     <h2>{{ player.display_name or player.name }}</h2>
 
     {% if player.display_name %}
-        <p class="small">
-            Real name: {{ player.name }}
-        </p>
+        <p class="small">Real name: {{ player.name }}</p>
     {% endif %}
 
     <p class="small">
         Preferred Voice: {{ player.preferred_voice }}
     </p>
+</div>
+
+<div class="card">
+    <h2>Gaming Profiles</h2>
 
     <div class="action-row">
+        {% if player.xbox_gamertag %}
+            <a class="button-link"
+               target="_blank"
+               href="https://www.xbox.com/play/user/{{ player.xbox_gamertag }}">
+                Xbox
+            </a>
+        {% endif %}
 
         {% if player.twitch_username %}
             <a class="button-link"
@@ -46,9 +54,15 @@
                 Steam
             </a>
         {% endif %}
-
     </div>
 
+    {% if player.discord_username %}
+        <p class="small">Discord: {{ player.discord_username }}</p>
+    {% endif %}
+
+    {% if not player.xbox_gamertag and not player.twitch_username and not player.steam_username and not player.discord_username %}
+        <p class="small">No gaming profiles added yet.</p>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -57,7 +71,7 @@
     <form method="post" action="/players/update">
         <input type="hidden" name="player_id" value="{{ player.id }}">
         <input type="hidden" name="next_url" value="/players/{{ player.id }}">
-        
+
         <div class="grid">
             <div>
                 <label class="small">Real Name</label><br>
@@ -83,26 +97,33 @@
             <div>
                 <label class="small">Xbox Gamertag</label><br>
                 <input name="xbox_gamertag"
-                       value="{{ player.xbox_gamertag }}"><br><br>
+                       value="{{ player.xbox_gamertag }}">
+                <small class="help-text">Your public Xbox gamertag.</small><br><br>
 
                 <label class="small">Discord Username</label><br>
                 <input name="discord_username"
-                       value="{{ player.discord_username }}"><br><br>
+                       value="{{ player.discord_username }}">
+                <small class="help-text">Example: lukefilewalker</small><br><br>
 
                 <label class="small">Twitch Username</label><br>
                 <input name="twitch_username"
-                       value="{{ player.twitch_username }}"><br><br>
+                       value="{{ player.twitch_username }}">
+                <small class="help-text">Example: lukefilewalker</small><br><br>
 
-                <label class="small">Steam Username</label><br>
+                <label class="small">Steam Vanity ID</label><br>
                 <input name="steam_username"
-                       value="{{ player.steam_username }}"><br><br>
+                       value="{{ player.steam_username }}">
+                <small class="help-text">
+                    Use the part after /id/ in your Steam profile URL.
+                    Example: lukefilewalker
+                </small><br><br>
             </div>
 
             <div>
                 <label class="small">Avatar URL</label><br>
                 <input name="avatar_url"
                        value="{{ player.avatar_url }}"
-                       placeholder="https://..."><br><br>
+                       placeholder="/static/avatars/example.png"><br><br>
 
                 <label class="small">Notes</label><br>
                 <input name="notes"

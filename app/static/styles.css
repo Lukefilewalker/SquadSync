@@ -287,6 +287,13 @@ form.inline {
     justify-content: center;
 }
 
+.help-text {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: var(--comment);
+}
+
 @media (max-width: 768px) {
     body {
         margin: 12px;
